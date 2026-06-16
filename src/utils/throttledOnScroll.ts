@@ -1,5 +1,6 @@
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+
 import { useThrottleDebounce } from "@/hooks/useThrottleDebounce";
-import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/scrollview-types";
 
 /**
  * Creates a throttled scroll event handler that respects the scrollEventThrottle interval.

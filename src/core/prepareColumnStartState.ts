@@ -1,5 +1,5 @@
 import { peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types.internal";
+import type { InternalState } from "@/types";
 import { getItemSize } from "@/utils/getItemSize";
 
 // Multi-column layout helpers used by the hot positioning paths to keep
@@ -15,27 +15,29 @@ interface ColumnStartState {
 // position sweep from an arbitrary index.
 export function prepareColumnStartState(
     ctx: StateContext,
+    state: InternalState,
     startIndex: number,
     useAverageSize: boolean,
 ): ColumnStartState {
-    const state = ctx.state;
     const numColumns = peek$(ctx, "numColumns");
 
     let rowStartIndex = startIndex;
-    const columnAtStart = state.columns[startIndex]!;
+    const columnAtStart = state.columns.get(state.idCache[startIndex]!)!;
     if (columnAtStart !== 1) {
         rowStartIndex = findRowStartIndex(state, numColumns, startIndex);
     }
 
     let currentRowTop = 0;
-    const column = state.columns[rowStartIndex]!;
+    const curId = state.idCache[rowStartIndex]!;
+    const column = state.columns.get(curId)!;
 
     if (rowStartIndex > 0) {
         const prevIndex = rowStartIndex - 1;
-        const prevPosition = state.positions[prevIndex] ?? 0;
+        const prevId = state.idCache[prevIndex]!;
+        const prevPosition = state.positions.get(prevId) ?? 0;
 
         const prevRowStart = findRowStartIndex(state, numColumns, prevIndex);
-        const prevRowHeight = calculateRowMaxSize(ctx, prevRowStart, prevIndex, useAverageSize);
+        const prevRowHeight = calculateRowMaxSize(state, prevRowStart, prevIndex, useAverageSize);
 
         currentRowTop = prevPosition + prevRowHeight;
     }
@@ -54,7 +56,7 @@ function findRowStartIndex(state: InternalState, numColumns: number, index: numb
 
     let rowStart = Math.max(0, index);
     while (rowStart > 0) {
-        const columnForIndex = state.columns[rowStart]!;
+        const columnForIndex = state.columns.get(state.idCache[rowStart]!)!;
         if (columnForIndex === 1) {
             break;
         }
@@ -64,8 +66,12 @@ function findRowStartIndex(state: InternalState, numColumns: number, index: numb
 }
 
 // Compute the tallest item height within the inclusive range to advance the row baseline.
-function calculateRowMaxSize(ctx: StateContext, startIndex: number, endIndex: number, useAverageSize: boolean): number {
-    const state = ctx.state;
+function calculateRowMaxSize(
+    state: InternalState,
+    startIndex: number,
+    endIndex: number,
+    useAverageSize: boolean,
+): number {
     if (endIndex < startIndex) {
         return 0;
     }
@@ -81,7 +87,7 @@ function calculateRowMaxSize(ctx: StateContext, startIndex: number, endIndex: nu
             continue;
         }
         const id = state.idCache[i]!;
-        const size = getItemSize(ctx, id, i, data[i], useAverageSize);
+        const size = getItemSize(state, id, i, data[i], useAverageSize);
         if (size > maxSize) {
             maxSize = size;
         }

@@ -1,41 +1,6 @@
-## 3.0.6
-
-- Fix: KeyboardAwareLegendList now accounts for bottom insets when alignItemsAtEnd is used, so short chat-style lists stay pinned above the keyboard or safe area instead of being pushed too low or leaving extra scroll space.
-
-## 3.0.5
-
-- Fix: clearCaches now rechecks the rows that are already on screen, so resetting the size cache does not leave items stuck in old positions.
-- Perf: Scrolling through content that is already rendered now updates viewability with less work.
-- Perf: Trimmed repeated work during scrolls, especially around recycled containers, sticky headers, size checks, and viewability.
-- Perf: Large and fast scrolls now reuse more of the same scroll state instead of recalculating it in multiple places.
-
-## 3.0.4
-
-- Fix: scrollToEnd now waits for newly committed data before targeting the final item, improving chat-style append-and-scroll flows.
-- Fix: Anchored end space waits for measured or fixed tail sizes before reporting readiness, avoiding stale end-space values during append flows.
-- Feat: Add anchoredEndSpace.onReady to notify when the anchored tail has authoritative sizing.
-
-## 3.0.3
-
-- Fix: MVCP was getting batched to improve big jumps, but was making scroll worse
-- Fix: On native, ignore one-physical-pixel layout measurement noise, preventing unnecessary item size updates from Fabric and native onLayout rounding differences.
-- Fix: Average item sizes update correctly when getFixedItemSize returns undefined for only some item types.
-
-## 3.0.2
-
-- Fix: Using viewability was causing scrolling to end to sometimes not update items in view if the JS thread was slammed
-
-## 3.0.1
-
-- Feat: SectionList now supports getFixedItemSize for items, headers, footers, and separators.
-- Fix: Non-animated scrollTo calls now precompute the target range before scrolling, preventing temporary blank content around the destination.
-- Fix: scrollToIndex was landing at the wrong location on iOS in some scenarios
-
-## 3.0.0
-
-- Feat: Web support
-- Breaking: Some of the maintainVisibleContentPosition behavior for preventing jumping while scrolling is now core behavior, and the behavior for maintaining scroll position when adding data is controlled by the prop, which is now disabled by default.
-- See https://legendapp.com/open-source/list/v3/migration/
+## 2.0.19
+- Fix: Add safety checks for getItemType, getEstimatedItemSize, getFixedItemSize, and keyExtractor to prevent calling when index is out of range
+- Fix: Error with animatedProps in reanimated integration
 
 ## 2.0.18
 - Improvement: KeyboardAvoidingLegendList now supports KeyboardGestureArea with improved interactive behavior

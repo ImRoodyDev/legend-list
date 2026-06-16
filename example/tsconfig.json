@@ -22,35 +22,23 @@
             "@/utils/*": [
                 "../src/utils/*"
             ],
-            "@legendapp/list/react": [
-                "../src/react"
-            ],
-            "@legendapp/list/react-native": [
-                "../src/react-native"
-            ],
-            "@legendapp/list/section-list": [
-                "../src/section-list"
+            "@legendapp/list": [
+                "../src/index"
             ],
             "@legendapp/list/keyboard": [
                 "../src/integrations/keyboard"
             ],
+            "@legendapp/list/keyboard-controller": [
+                "../src/integrations/keyboard-controller"
+            ],
             "@legendapp/list/reanimated": [
                 "../src/integrations/reanimated"
-            ],
-            "@examples/*": [
-                "../examples-shared/*"
             ],
             "~/*": [
                 "./*"
             ]
         },
-        "strict": true,
-        "types": [
-            "react",
-            "react-native",
-            "jest",
-            "node"
-        ]
+        "strict": true
     },
     "extends": "expo/tsconfig.base",
     "include": [

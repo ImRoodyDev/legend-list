@@ -26,8 +26,15 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Architecture notes
+## Testing on old arhitecture
 
-This `example/` app is new architecture only.
+LegendList is by default ran on the react native new architecture. It's important to check compatibility with old architecture.
 
-For old architecture testing, use `example-oldarch/`, which is pinned to the pre-upgrade Expo/Reanimated stack.
+To build version for old architecture:
+1. delete your ios and anrdoid folders
+2. build new versions 
+```
+OLD_ARCH=TRUE bun android
+OLD_ARCH=TRUE bun ios
+```
+Those applications will have separate app name list-test-oldarch and different app id, so both old and new architectures can be tested on same device.

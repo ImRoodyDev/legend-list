@@ -1,10 +1,10 @@
-import type React from "react";
+import React from "react";
 
 import { peek$, type StateContext } from "@/state/state";
-import { isNullOrUndefined } from "@/utils/helpers";
+import type { InternalState } from "@/types";
+import { isFunction, isNullOrUndefined } from "@/utils/helpers";
 
-export function getRenderedItem(ctx: StateContext, key: string) {
-    const state = ctx.state;
+export function getRenderedItem(ctx: StateContext, state: InternalState, key: string) {
     if (!state) {
         return null;
     }
@@ -34,7 +34,7 @@ export function getRenderedItem(ctx: StateContext, key: string) {
             type: getItemType ? (getItemType(item, index) ?? "") : "",
         };
 
-        renderedItem = renderItem(itemProps) as React.ReactNode;
+        renderedItem = isFunction(renderItem) ? renderItem(itemProps) : React.createElement(renderItem, itemProps);
     }
 
     return { index, item: data[index], renderedItem };

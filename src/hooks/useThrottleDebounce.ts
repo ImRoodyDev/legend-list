@@ -15,7 +15,7 @@ export function useThrottleDebounce(mode: Mode) {
     };
 
     const execute = useCallback(
-        (callback: (...cbArgs: any[]) => void, delay: number, ...args: any[]) => {
+        (callback: (...args: any[]) => void, delay: number, ...args: any[]) => {
             if (mode === "debounce") {
                 clearTimeoutRef();
                 timeoutRef.current = setTimeout(() => callback(...args), delay);

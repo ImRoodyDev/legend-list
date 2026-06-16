@@ -1,9 +1,9 @@
 import * as React from "react";
 import { useEffect, useReducer } from "react";
+import { Text, View } from "react-native";
 
-import { Text, View } from "@/platform/ViewComponents";
-import { getContentSize } from "@/state/getContentSize";
-import { useArr$, useStateContext } from "@/state/state";
+import { getContentSize, useArr$, useStateContext } from "@/state/state";
+import type { InternalState } from "@/types";
 
 const DebugRow = ({ children }: React.PropsWithChildren) => {
     return (
@@ -11,27 +11,18 @@ const DebugRow = ({ children }: React.PropsWithChildren) => {
     );
 };
 
-// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-export const DebugView = React.memo(function DebugView() {
+export const DebugView = React.memo(function DebugView({ state }: { state: InternalState }) {
     const ctx = useStateContext();
 
-    const [
-        totalSize = 0,
-        scrollAdjust = 0,
-        rawScroll = 0,
-        scroll = 0,
-        _numContainers = 0,
-        _numContainersPooled = 0,
-        isAtEnd = false,
-    ] = useArr$([
-        "totalSize",
-        "scrollAdjust",
-        "debugRawScroll",
-        "debugComputedScroll",
-        "numContainers",
-        "numContainersPooled",
-        "isAtEnd",
-    ]);
+    const [totalSize = 0, scrollAdjust = 0, rawScroll = 0, scroll = 0, _numContainers = 0, _numContainersPooled = 0] =
+        useArr$([
+            "totalSize",
+            "scrollAdjust",
+            "debugRawScroll",
+            "debugComputedScroll",
+            "numContainers",
+            "numContainersPooled",
+        ]);
 
     const contentSize = getContentSize(ctx);
     const [, forceUpdate] = useReducer((x) => x + 1, 0);
@@ -65,12 +56,14 @@ export const DebugView = React.memo(function DebugView() {
             </DebugRow>
             <DebugRow>
                 <Text>At end:</Text>
-                <Text>{String(isAtEnd)}</Text>
+                <Text>{String(state.isAtEnd)}</Text>
             </DebugRow>
+            <Text />
             <DebugRow>
                 <Text>ScrollAdjust:</Text>
                 <Text>{scrollAdjust.toFixed(2)}</Text>
             </DebugRow>
+            <Text />
             <DebugRow>
                 <Text>RawScroll: </Text>
                 <Text>{rawScroll.toFixed(2)}</Text>

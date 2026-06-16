@@ -15,10 +15,10 @@ describe("setPaddingTop", () => {
 
     beforeEach(() => {
         mockCtx = createMockContext({
+            alignItemsPaddingTop: 0,
             stylePaddingTop: 0,
             totalSize: 1000,
         });
-        mockCtx.state = {};
 
         // Reset spies if they exist
         if (peekSpy) peekSpy.mockRestore?.();
@@ -45,34 +45,80 @@ describe("setPaddingTop", () => {
     afterEach(() => {
         // Restore setTimeout
         globalThis.setTimeout = originalSetTimeout;
-        // Restore spies so other tests use real implementations
-        peekSpy?.mockRestore?.();
-        setSpy?.mockRestore?.();
     });
 
     describe("stylePaddingTop handling", () => {
         it("should set stylePaddingTop when provided", () => {
-            setPaddingTop(mockCtx, { stylePaddingTop: 50 });
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 50);
         });
 
         it("should not set stylePaddingTop when undefined", () => {
-            setPaddingTop(mockCtx, { stylePaddingTop: undefined });
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: undefined });
 
             expect(setSpy).not.toHaveBeenCalledWith(mockCtx, "stylePaddingTop", expect.anything());
         });
 
         it("should handle zero stylePaddingTop", () => {
-            setPaddingTop(mockCtx, { stylePaddingTop: 0 });
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 0 });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 0);
         });
 
         it("should handle negative stylePaddingTop", () => {
-            setPaddingTop(mockCtx, { stylePaddingTop: -25 });
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: -25 });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", -25);
+        });
+    });
+
+    describe("alignItemsPaddingTop handling", () => {
+        it("should set alignItemsPaddingTop when provided", () => {
+            setPaddingTop(mockCtx, {} as any, { alignItemsPaddingTop: 75 });
+
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", 75);
+        });
+
+        it("should not set alignItemsPaddingTop when undefined", () => {
+            setPaddingTop(mockCtx, {} as any, { alignItemsPaddingTop: undefined });
+
+            expect(setSpy).not.toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", expect.anything());
+        });
+
+        it("should handle zero alignItemsPaddingTop", () => {
+            setPaddingTop(mockCtx, {} as any, { alignItemsPaddingTop: 0 });
+
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", 0);
+        });
+
+        it("should handle negative alignItemsPaddingTop", () => {
+            setPaddingTop(mockCtx, {} as any, { alignItemsPaddingTop: -30 });
+
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", -30);
+        });
+    });
+
+    describe("both padding types", () => {
+        it("should set both padding types when provided", () => {
+            setPaddingTop(mockCtx, {} as any, { alignItemsPaddingTop: 60, stylePaddingTop: 40 });
+
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 40);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", 60);
+        });
+
+        it("should handle both as zero", () => {
+            setPaddingTop(mockCtx, {} as any, { alignItemsPaddingTop: 0, stylePaddingTop: 0 });
+
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 0);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", 0);
+        });
+
+        it("should handle mixed values", () => {
+            setPaddingTop(mockCtx, {} as any, { alignItemsPaddingTop: -50, stylePaddingTop: 100 });
+
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 100);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", -50);
         });
     });
 
@@ -84,7 +130,7 @@ describe("setPaddingTop", () => {
         });
 
         it("should trigger scroll prevention when reducing stylePaddingTop", () => {
-            setPaddingTop(mockCtx, { stylePaddingTop: 50 }); // Reducing from 100 to 50
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 }); // Reducing from 100 to 50
 
             // Should temporarily increase totalSize
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 2100); // 2000 + 100
@@ -97,7 +143,7 @@ describe("setPaddingTop", () => {
         });
 
         it("should not trigger scroll prevention when increasing stylePaddingTop", () => {
-            setPaddingTop(mockCtx, { stylePaddingTop: 150 }); // Increasing from 100 to 150
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 150 }); // Increasing from 100 to 150
 
             // Should only set new padding, not modify totalSize
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 150);
@@ -108,7 +154,7 @@ describe("setPaddingTop", () => {
         });
 
         it("should not trigger scroll prevention when setting same stylePaddingTop", () => {
-            setPaddingTop(mockCtx, { stylePaddingTop: 100 }); // Same as current
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 100 }); // Same as current
 
             // Should only set padding
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 100);
@@ -119,7 +165,7 @@ describe("setPaddingTop", () => {
         });
 
         it("should execute timeout callback to restore totalSize", () => {
-            setPaddingTop(mockCtx, { stylePaddingTop: 50 }); // Reducing from 100 to 50
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 }); // Reducing from 100 to 50
 
             // Verify initial state
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 2100);
@@ -138,7 +184,7 @@ describe("setPaddingTop", () => {
         it("should handle zero previous stylePaddingTop", () => {
             mockCtx.values.set("stylePaddingTop", 0);
 
-            setPaddingTop(mockCtx, { stylePaddingTop: 50 }); // Increasing from 0 to 50
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 }); // Increasing from 0 to 50
 
             // Should not trigger scroll prevention (increasing)
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 50);
@@ -149,7 +195,7 @@ describe("setPaddingTop", () => {
         it("should handle null previous stylePaddingTop", () => {
             mockCtx.values.set("stylePaddingTop", null);
 
-            setPaddingTop(mockCtx, { stylePaddingTop: 50 });
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 });
 
             // Should treat null as 0, so no scroll prevention needed
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 50);
@@ -159,7 +205,7 @@ describe("setPaddingTop", () => {
         it("should handle undefined previous stylePaddingTop", () => {
             mockCtx.values.delete("stylePaddingTop");
 
-            setPaddingTop(mockCtx, { stylePaddingTop: 50 });
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 });
 
             // Should treat undefined as 0, so no scroll prevention needed
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 50);
@@ -175,7 +221,7 @@ describe("setPaddingTop", () => {
         it("should handle zero totalSize", () => {
             mockCtx.values.set("totalSize", 0);
 
-            setPaddingTop(mockCtx, { stylePaddingTop: 40 }); // Reducing by 40
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 40 }); // Reducing by 40
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 80); // 0 + 80
             expect(timeoutCallbacks).toHaveLength(1);
@@ -189,7 +235,7 @@ describe("setPaddingTop", () => {
         it("should handle null totalSize", () => {
             mockCtx.values.set("totalSize", null);
 
-            setPaddingTop(mockCtx, { stylePaddingTop: 40 }); // Reducing
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 40 }); // Reducing
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 80); // null treated as 0
             expect(timeoutCallbacks).toHaveLength(1);
@@ -203,7 +249,7 @@ describe("setPaddingTop", () => {
         it("should handle undefined totalSize", () => {
             mockCtx.values.delete("totalSize");
 
-            setPaddingTop(mockCtx, { stylePaddingTop: 40 }); // Reducing
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 40 }); // Reducing
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 80); // undefined treated as 0
             expect(timeoutCallbacks).toHaveLength(1);
@@ -217,7 +263,7 @@ describe("setPaddingTop", () => {
         it("should handle large totalSize", () => {
             mockCtx.values.set("totalSize", 1000000);
 
-            setPaddingTop(mockCtx, { stylePaddingTop: 40 }); // Reducing by 40
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 40 }); // Reducing by 40
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 1000080); // 1000000 + 80
             expect(timeoutCallbacks).toHaveLength(1);
@@ -231,42 +277,50 @@ describe("setPaddingTop", () => {
 
     describe("edge cases and error handling", () => {
         it("should handle empty options object", () => {
-            setPaddingTop(mockCtx, {});
+            setPaddingTop(mockCtx, {} as any, {});
 
             expect(setSpy).not.toHaveBeenCalled();
             expect(timeoutCallbacks).toHaveLength(0);
         });
 
         it("should handle very large padding values", () => {
-            setPaddingTop(mockCtx, {
+            setPaddingTop(mockCtx, {} as any, {
+                alignItemsPaddingTop: Number.MAX_SAFE_INTEGER,
                 stylePaddingTop: Number.MAX_SAFE_INTEGER,
             });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", Number.MAX_SAFE_INTEGER);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", Number.MAX_SAFE_INTEGER);
         });
 
         it("should handle NaN padding values", () => {
-            setPaddingTop(mockCtx, {
+            setPaddingTop(mockCtx, {} as any, {
+                alignItemsPaddingTop: NaN,
                 stylePaddingTop: NaN,
             });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", NaN);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", NaN);
         });
 
         it("should handle Infinity padding values", () => {
-            setPaddingTop(mockCtx, {
+            setPaddingTop(mockCtx, {} as any, {
+                alignItemsPaddingTop: -Infinity,
                 stylePaddingTop: Infinity,
             });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", Infinity);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", -Infinity);
         });
 
         it("should handle floating point values", () => {
-            setPaddingTop(mockCtx, {
+            setPaddingTop(mockCtx, {} as any, {
+                alignItemsPaddingTop: -6.789,
                 stylePaddingTop: 12.345,
             });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 12.345);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", -6.789);
         });
 
         it("should handle state errors gracefully", () => {
@@ -276,7 +330,7 @@ describe("setPaddingTop", () => {
             });
 
             expect(() => {
-                setPaddingTop(mockCtx, { stylePaddingTop: 50 });
+                setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 });
             }).toThrow("State access error");
         });
 
@@ -287,7 +341,7 @@ describe("setPaddingTop", () => {
             });
 
             expect(() => {
-                setPaddingTop(mockCtx, { stylePaddingTop: 50 });
+                setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 });
             }).toThrow("State update error");
         });
     });
@@ -307,16 +361,16 @@ describe("setPaddingTop", () => {
                 return 1;
             }) as any;
 
-            setPaddingTop(mockCtx, { stylePaddingTop: 50 });
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 });
 
             expect(capturedDelay!).toBe(16);
         });
 
         it("should handle multiple rapid padding changes", () => {
             // Multiple rapid reductions
-            setPaddingTop(mockCtx, { stylePaddingTop: 80 }); // Reduce to 80
-            setPaddingTop(mockCtx, { stylePaddingTop: 60 }); // Reduce to 60
-            setPaddingTop(mockCtx, { stylePaddingTop: 40 }); // Reduce to 40
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 80 }); // Reduce to 80
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 60 }); // Reduce to 60
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 40 }); // Reduce to 40
 
             // Should schedule multiple timeouts
             expect(timeoutCallbacks.length).toBeGreaterThan(0);
@@ -331,7 +385,7 @@ describe("setPaddingTop", () => {
         });
 
         it("should handle timeout execution after state changes", () => {
-            setPaddingTop(mockCtx, { stylePaddingTop: 50 }); // Reduce from 100
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 }); // Reduce from 100
 
             // Change totalSize in between
             mockCtx.values.set("totalSize", 3000);
@@ -350,7 +404,8 @@ describe("setPaddingTop", () => {
             const start = performance.now();
 
             for (let i = 0; i < 1000; i++) {
-                setPaddingTop(mockCtx, {
+                setPaddingTop(mockCtx, {} as any, {
+                    alignItemsPaddingTop: (i + 50) % 100,
                     stylePaddingTop: i % 100,
                 });
             }
@@ -364,7 +419,7 @@ describe("setPaddingTop", () => {
 
             // Many reductions in quick succession
             for (let i = 99; i >= 0; i--) {
-                setPaddingTop(mockCtx, { stylePaddingTop: i });
+                setPaddingTop(mockCtx, {} as any, { stylePaddingTop: i });
             }
 
             // Should have many timeouts (100), but function should still work
@@ -378,7 +433,7 @@ describe("setPaddingTop", () => {
                 return mockCtx.values.get(key);
             });
 
-            setPaddingTop(mockCtx, { stylePaddingTop: 50 });
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 50 });
 
             // Should only call peek$ for necessary values
             expect(peekCallCount).toBeLessThan(5); // stylePaddingTop and totalSize
@@ -386,12 +441,23 @@ describe("setPaddingTop", () => {
     });
 
     describe("integration patterns", () => {
+        it("should work correctly with alignItemsAtEnd workflow", () => {
+            // Common pattern: set both paddings together for alignItemsAtEnd
+            setPaddingTop(mockCtx, {} as any, {
+                alignItemsPaddingTop: 300,
+                stylePaddingTop: 20,
+            });
+
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 20);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", 300);
+        });
+
         it("should handle chat UI pattern (reducing top padding)", () => {
             // Common in chat UIs: start with large padding, reduce as content loads
             mockCtx.values.set("stylePaddingTop", 400);
             mockCtx.values.set("totalSize", 1500);
 
-            setPaddingTop(mockCtx, { stylePaddingTop: 100 }); // Reduce significantly
+            setPaddingTop(mockCtx, {} as any, { stylePaddingTop: 100 }); // Reduce significantly
 
             // Should prevent scroll jump
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 1900); // 1500 + 400
@@ -409,7 +475,7 @@ describe("setPaddingTop", () => {
             mockCtx.values.set("stylePaddingTop", 250);
 
             paddingValues.forEach((padding) => {
-                setPaddingTop(mockCtx, { stylePaddingTop: padding });
+                setPaddingTop(mockCtx, {} as any, { stylePaddingTop: padding });
             });
 
             // Should trigger scroll prevention for each reduction

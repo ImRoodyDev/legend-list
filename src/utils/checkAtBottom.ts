@@ -1,12 +1,9 @@
-import { EDGE_POSITION_EPSILON } from "@/constants";
-import { getContentInsetEnd } from "@/state/getContentInsetEnd";
-import { getContentSize } from "@/state/getContentSize";
-import { type StateContext, set$ } from "@/state/state";
+import type { StateContext } from "@/state/state";
+import { getContentSize } from "@/state/state";
+import type { InternalState } from "@/types";
 import { checkThreshold } from "@/utils/checkThreshold";
-import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 
-export function checkAtBottom(ctx: StateContext) {
-    const state = ctx.state;
+export function checkAtBottom(ctx: StateContext, state: InternalState) {
     if (!state) {
         return;
     }
@@ -17,39 +14,23 @@ export function checkAtBottom(ctx: StateContext) {
         maintainingScrollAtEnd,
         props: { maintainScrollAtEndThreshold, onEndReachedThreshold },
     } = state;
-
     const contentSize = getContentSize(ctx);
-    if (contentSize > 0 && queuedInitialLayout) {
-        const insetEnd = getContentInsetEnd(ctx);
-        const distanceFromEnd = contentSize - scroll - scrollLength - insetEnd;
+    if (contentSize > 0 && queuedInitialLayout && !maintainingScrollAtEnd) {
+        // Check if at end
+        const distanceFromEnd = contentSize - scroll - scrollLength;
         const isContentLess = contentSize < scrollLength;
-        set$(ctx, "isAtEnd", isContentLess || distanceFromEnd <= EDGE_POSITION_EPSILON);
-        set$(ctx, "isNearEnd", isContentLess || distanceFromEnd <= onEndReachedThreshold! * scrollLength);
-        set$(
-            ctx,
-            "isWithinMaintainScrollAtEndThreshold",
-            isContentLess || distanceFromEnd <= maintainScrollAtEndThreshold! * scrollLength,
-        );
+        state.isAtEnd = isContentLess || distanceFromEnd < scrollLength * maintainScrollAtEndThreshold!;
 
-        const shouldSkipThresholdChecks = hasActiveInitialScroll(state) || maintainingScrollAtEnd;
-        if (!shouldSkipThresholdChecks) {
-            state.isEndReached = checkThreshold(
-                distanceFromEnd,
-                isContentLess,
-                onEndReachedThreshold! * scrollLength,
-                state.isEndReached,
-                state.endReachedSnapshot,
-                {
-                    contentSize,
-                    dataLength: state.props.data?.length,
-                    scrollPosition: scroll,
-                },
-                (distance) => state.props.onEndReached?.({ distanceFromEnd: distance }),
-                (snapshot) => {
-                    state.endReachedSnapshot = snapshot;
-                },
-                true,
-            );
-        }
+        state.isEndReached = checkThreshold(
+            distanceFromEnd,
+            isContentLess,
+            onEndReachedThreshold! * scrollLength,
+            state.isEndReached,
+            state.endReachedBlockedByTimer,
+            (distance) => state.props.onEndReached?.({ distanceFromEnd: distance }),
+            (block) => {
+                state.endReachedBlockedByTimer = block;
+            },
+        );
     }
 }

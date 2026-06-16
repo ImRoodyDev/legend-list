@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
-import type { InternalState } from "../../src/types.internal";
+import type { InternalState } from "../../src/types";
 import { getId } from "../../src/utils/getId";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -10,6 +10,7 @@ describe("getId", () => {
 
     beforeEach(() => {
         mockState = createMockState({
+            idCache: [],
             props: {
                 data: [
                     { id: "item1", name: "First" },
@@ -149,7 +150,7 @@ describe("getId", () => {
         });
 
         it("should handle keyExtractor throwing error", () => {
-            mockState.props.keyExtractor = (_item: any, _index: number) => {
+            mockState.props.keyExtractor = (item: any, index: number) => {
                 throw new Error("keyExtractor error");
             };
 
@@ -162,7 +163,7 @@ describe("getId", () => {
                 { id: 2, title: "Hello", type: "post" },
                 { id: 3, name: "Jane", type: "user" },
             ];
-            mockState.props.keyExtractor = (item: any, _index: number) => `${item.type}_${item.id}`;
+            mockState.props.keyExtractor = (item: any, index: number) => `${item.type}_${item.id}`;
 
             expect(getId(mockState, 0)).toBe("user_1");
             expect(getId(mockState, 1)).toBe("post_2");

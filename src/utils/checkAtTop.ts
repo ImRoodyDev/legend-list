@@ -1,73 +1,27 @@
-import { EDGE_POSITION_EPSILON } from "@/constants";
-import { type StateContext, set$ } from "@/state/state";
+import type { InternalState } from "@/types";
 import { checkThreshold } from "@/utils/checkThreshold";
-import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
-import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
-export function checkAtTop(ctx: StateContext) {
-    const state = ctx?.state;
+export function checkAtTop(state: InternalState) {
     if (!state) {
         return;
     }
     const {
-        dataChangeEpoch,
-        isStartReached,
-        props: { data, onStartReachedThreshold },
-        scroll,
         scrollLength,
-        startReachedSnapshot,
-        startReachedSnapshotDataChangeEpoch,
-        totalSize,
+        scroll,
+        props: { onStartReachedThreshold },
     } = state;
+    const distanceFromTop = scroll;
+    state.isAtStart = distanceFromTop <= 0;
 
-    const dataLength = data.length;
-    const threshold = onStartReachedThreshold! * scrollLength;
-    const dataChanged = startReachedSnapshotDataChangeEpoch !== dataChangeEpoch;
-    const withinThreshold = threshold > 0 && Math.abs(scroll) <= threshold;
-    const allowReentryOnDataChange = !!isStartReached && withinThreshold && !!dataChanged && !isInMVCPActiveMode(state);
-
-    // If data changes and pushes us back outside the start window, immediately
-    // clear the start latch so a fast return to the top can trigger again.
-    if (
-        isStartReached &&
-        threshold > 0 &&
-        scroll > threshold &&
-        startReachedSnapshot &&
-        (dataChanged ||
-            startReachedSnapshot.contentSize !== totalSize ||
-            startReachedSnapshot.dataLength !== dataLength)
-    ) {
-        state.isStartReached = false;
-        state.startReachedSnapshot = undefined;
-        state.startReachedSnapshotDataChangeEpoch = undefined;
-    }
-
-    set$(ctx, "isAtStart", scroll <= EDGE_POSITION_EPSILON);
-    set$(ctx, "isNearStart", scroll <= threshold);
-
-    const shouldSkipThresholdChecks = hasActiveInitialScroll(state) || !!state.scrollingTo;
-    // Data changed while still inside the start window. Wait for MVCP to settle,
-    // then allow one re-fire for this data change epoch.
-    const shouldDeferDataChangeRefire = isStartReached && withinThreshold && dataChanged && !allowReentryOnDataChange;
-
-    if (!shouldSkipThresholdChecks && !shouldDeferDataChangeRefire) {
-        state.isStartReached = checkThreshold(
-            scroll,
-            false,
-            threshold,
-            state.isStartReached,
-            allowReentryOnDataChange ? undefined : startReachedSnapshot,
-            {
-                contentSize: totalSize,
-                dataLength,
-                scrollPosition: scroll,
-            },
-            (distance) => state.props.onStartReached?.({ distanceFromStart: distance }),
-            (snapshot) => {
-                state.startReachedSnapshot = snapshot;
-                state.startReachedSnapshotDataChangeEpoch = snapshot ? dataChangeEpoch : undefined;
-            },
-            allowReentryOnDataChange,
-        );
-    }
+    state.isStartReached = checkThreshold(
+        distanceFromTop,
+        false,
+        onStartReachedThreshold! * scrollLength,
+        state.isStartReached,
+        state.startReachedBlockedByTimer,
+        (distance) => state.props.onStartReached?.({ distanceFromStart: distance }),
+        (block) => {
+            state.startReachedBlockedByTimer = block;
+        },
+    );
 }

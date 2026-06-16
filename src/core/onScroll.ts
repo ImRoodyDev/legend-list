@@ -1,55 +1,17 @@
-import { clearFinishedBootstrapInitialScrollTargetIfMovedAway } from "@/core/bootstrapInitialScroll";
-import { checkFinishedScroll } from "@/core/checkFinishedScroll";
-import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { initialScrollWatchdog } from "@/core/initialScrollSession";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+
+import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { scrollTo } from "@/core/scrollTo";
-import { updateScroll } from "@/core/updateScroll";
-import { Platform } from "@/platform/Platform";
-import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
-import type { StateContext } from "@/state/state";
-import { toLogicalHorizontalOffset } from "@/utils/rtl";
+import { getContentSize, type StateContext } from "@/state/state";
+import type { InternalState } from "@/types";
+import { checkAtBottom } from "@/utils/checkAtBottom";
+import { checkAtTop } from "@/utils/checkAtTop";
 
-function trackInitialScrollNativeProgress(state: StateContext["state"], newScroll: number) {
-    const initialNativeScrollWatchdog = initialScrollWatchdog.get(state);
-    const didInitialScrollReachTarget =
-        !!initialNativeScrollWatchdog && initialScrollWatchdog.didReachTarget(newScroll, initialNativeScrollWatchdog);
-
-    if (didInitialScrollReachTarget) {
-        initialScrollWatchdog.clear(state);
-        return;
-    }
-
-    if (initialNativeScrollWatchdog) {
-        state.hasScrolled = false;
-        initialScrollWatchdog.set(state, {
-            startScroll: initialNativeScrollWatchdog.startScroll,
-            targetOffset: initialNativeScrollWatchdog.targetOffset,
-        });
-    }
-}
-
-function shouldDeferPublicOnScroll(state: StateContext["state"]) {
-    return (
-        Platform.OS === "web" &&
-        !!state.initialScroll &&
-        state.initialScrollSession?.kind === "bootstrap" &&
-        !state.didFinishInitialScroll
-    );
-}
-
-function cloneScrollEvent(event: NativeSyntheticEvent<NativeScrollEvent>): NativeSyntheticEvent<NativeScrollEvent> {
-    return {
-        ...event,
-        nativeEvent: {
-            ...event.nativeEvent,
-        },
-    };
-}
-
-export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const state = ctx.state;
-    const { scrollProcessingEnabled } = state;
-
+export function onScroll(ctx: StateContext, state: InternalState, event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const {
+        scrollProcessingEnabled,
+        props: { onScroll: onScrollProp },
+    } = state;
     if (scrollProcessingEnabled === false) {
         return;
     }
@@ -58,68 +20,77 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         return;
     }
 
-    let insetChanged = false;
-    if (event.nativeEvent?.contentInset) {
-        const { contentInset } = event.nativeEvent;
-        const prevInset = state.nativeContentInset;
-        if (
-            !prevInset ||
-            prevInset.top !== contentInset.top ||
-            prevInset.bottom !== contentInset.bottom ||
-            prevInset.left !== contentInset.left ||
-            prevInset.right !== contentInset.right
-        ) {
-            state.nativeContentInset = contentInset;
-            insetChanged = true;
+    let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
+    state.scrollPending = newScroll;
+
+    const maxOffset = Math.max(0, getContentSize(ctx) - state.scrollLength);
+    if (state.initialScroll && newScroll > maxOffset) {
+        // If the scroll is past the end for some reason, clamp it to the end
+        newScroll = maxOffset;
+        scrollTo(state, {
+            noScrollingTo: true,
+            offset: newScroll,
+        });
+    }
+
+    updateScroll(ctx, state, newScroll);
+
+    onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
+}
+
+function updateScroll(ctx: StateContext, state: InternalState, newScroll: number) {
+    const scrollingTo = state.scrollingTo;
+
+    state.hasScrolled = true;
+    state.lastBatchingAction = Date.now();
+    const currentTime = Date.now();
+
+    const adjust = state.scrollAdjustHandler.getAdjust();
+    const lastHistoryAdjust = state.lastScrollAdjustForHistory;
+    const adjustChanged = lastHistoryAdjust !== undefined && Math.abs(adjust - lastHistoryAdjust) > 0.1;
+
+    if (adjustChanged) {
+        state.scrollHistory.length = 0;
+    }
+
+    state.lastScrollAdjustForHistory = adjust;
+
+    // Don't add to the history if it's initial scroll event otherwise invalid velocity will be calculated
+    // Don't add to the history if we are scrolling to an offset
+    if (scrollingTo === undefined && !(state.scrollHistory.length === 0 && newScroll === state.scroll)) {
+        if (!adjustChanged) {
+            // Skip history samples while scrollAdjust is changing since those jumps are synthetic
+            state.scrollHistory.push({ scroll: newScroll, time: currentTime });
         }
     }
 
-    let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
-    if (state.props.horizontal) {
-        newScroll = toLogicalHorizontalOffset(state, newScroll, event.nativeEvent.contentSize?.width);
-    }
-    const isFinishedEndInitialScroll =
-        state.didFinishInitialScroll && state.initialScroll?.viewPosition === 1 && state.scroll > state.scrollLength;
-    const shouldIgnoreNegativeInsetChange =
-        Platform.OS !== "web" && insetChanged && newScroll < 0 && isFinishedEndInitialScroll;
-    if (shouldIgnoreNegativeInsetChange) {
-        return;
+    // Keep only last 5 entries
+    if (state.scrollHistory.length > 5) {
+        state.scrollHistory.shift();
     }
 
-    state.lastNativeScroll = newScroll;
-    state.lastNativeScrollTime = Date.now();
+    // Update current scroll state
+    state.scrollPrev = state.scroll;
+    state.scrollPrevTime = state.scrollTime;
+    state.scroll = newScroll;
+    state.scrollTime = currentTime;
 
-    if (state.scrollingTo && state.scrollingTo.offset >= newScroll) {
-        const maxOffset = clampScrollOffset(ctx, newScroll, state.scrollingTo);
-        if (newScroll !== maxOffset && Math.abs(newScroll - maxOffset) > 1) {
-            // If the scroll is past the end for some reason, clamp it to the end
-            newScroll = maxOffset;
-            scrollTo(ctx, {
-                forceScroll: true,
-                isInitialScroll: true,
-                noScrollingTo: true,
-                offset: newScroll,
-            });
-
+    // Ignore scroll events that are too close to the previous scroll position
+    // after adjusting for MVCP
+    const ignoreScrollFromMVCP = state.ignoreScrollFromMVCP;
+    if (ignoreScrollFromMVCP && !state.scrollingTo) {
+        const { lt, gt } = ignoreScrollFromMVCP;
+        if ((lt && newScroll < lt) || (gt && newScroll > gt)) {
             return;
         }
     }
 
-    state.scrollPending = newScroll;
+    if (state.dataChangeNeedsScrollUpdate || Math.abs(state.scroll - state.scrollPrev) > 2) {
+        // Use velocity to predict scroll position
+        calculateItemsInView(ctx, state, { doMVCP: state.scrollingTo !== undefined });
+        checkAtBottom(ctx, state);
+        checkAtTop(state);
 
-    updateScroll(ctx, newScroll, insetChanged);
-    trackInitialScrollNativeProgress(state, newScroll);
-    clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx);
-
-    if (state.scrollingTo) {
-        checkFinishedScroll(ctx);
-    }
-
-    if (state.props.onScroll) {
-        if (shouldDeferPublicOnScroll(state)) {
-            state.deferredPublicOnScrollEvent = cloneScrollEvent(event);
-        } else {
-            state.props.onScroll(event as any);
-        }
+        state.dataChangeNeedsScrollUpdate = false;
     }
 }

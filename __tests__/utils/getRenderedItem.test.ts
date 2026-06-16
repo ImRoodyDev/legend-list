@@ -1,14 +1,13 @@
 import React from "react";
 
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
-import { Text } from "react-native";
 
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types.internal";
+import type { InternalState } from "../../src/types";
 import { getRenderedItem } from "../../src/utils/getRenderedItem";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { render } from "../helpers/testingLibrary";
+import { createMockState } from "../__mocks__/createMockState";
 
 // Mock renderItem components for testing
 const MockRenderItem = ({ item, index }: { item: any; index: number }) => {
@@ -16,7 +15,7 @@ const MockRenderItem = ({ item, index }: { item: any; index: number }) => {
     return React.createElement("div", { key: index }, `Item ${label} at ${index}`);
 };
 
-const ThrowingRenderItem = () => {
+const ThrowingRenderItem = ({ item, index }: { item: any; index: number }) => {
     throw new Error("Render error");
 };
 
@@ -25,32 +24,30 @@ describe("getRenderedItem", () => {
     let mockState: InternalState;
 
     beforeEach(() => {
-        mockCtx = createMockContext(
-            {
-                extraData: null,
+        mockCtx = createMockContext({
+            extraData: null,
+        });
+
+        mockState = createMockState({
+            indexByKey: new Map([
+                ["item_0", 0],
+                ["item_1", 1],
+                ["item_2", 2],
+            ]),
+            props: {
+                data: [
+                    { id: "item1", name: "First" },
+                    { id: "item2", name: "Second" },
+                    { id: "item3", name: "Third" },
+                ],
+                renderItem: MockRenderItem,
             },
-            {
-                indexByKey: new Map([
-                    ["item_0", 0],
-                    ["item_1", 1],
-                    ["item_2", 2],
-                ]),
-                props: {
-                    data: [
-                        { id: "item1", name: "First" },
-                        { id: "item2", name: "Second" },
-                        { id: "item3", name: "Third" },
-                    ],
-                    renderItem: MockRenderItem,
-                },
-            },
-        );
-        mockState = mockCtx.state;
+        });
     });
 
     describe("basic functionality", () => {
         it("should return rendered item with correct structure", () => {
-            const result = getRenderedItem(mockCtx, "item_1");
+            const result = getRenderedItem(mockCtx, mockState, "item_1");
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(1);
@@ -60,41 +57,27 @@ describe("getRenderedItem", () => {
         });
 
         it("should pass correct props to renderItem", () => {
-            const renderItem = mock((props: any) => React.createElement("div", null, props.item.name));
-            mockState.props.renderItem = renderItem;
-
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, mockState, "item_0");
 
             expect(result).not.toBeNull();
-            expect(renderItem).toHaveBeenCalledWith({
-                data: mockState.props.data,
-                extraData: null,
-                index: 0,
-                item: { id: "item1", name: "First" },
-                type: "",
-            });
+            // The renderedItem should be a React element created with the component
             expect(React.isValidElement(result!.renderedItem)).toBe(true);
+
+            // We can check the element's props to verify correct data was passed
             const element = result!.renderedItem as React.ReactElement;
-            expect(element.type).toBe("div");
+            // Our MockRenderItem renders children and React adds a key prop; props differ from LegendList's renderItem signature
+            expect(element.props.children).toBe("Item First at 0");
         });
 
         it("should include extraData from context", () => {
             const extraData = { theme: "dark", version: "1.0" };
-            const renderItem = mock((props: any) => React.createElement("div", null, props.extraData.theme));
-            mockState.props.renderItem = renderItem;
             mockCtx.values.set("extraData", extraData);
 
-            const result = getRenderedItem(mockCtx, "item_1");
+            const result = getRenderedItem(mockCtx, mockState, "item_1");
 
             expect(result).not.toBeNull();
-            expect(renderItem).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    extraData,
-                    item: { id: "item2", name: "Second" },
-                }),
-            );
             const element = result!.renderedItem as React.ReactElement;
-            expect(element.props.children).toBe("dark");
+            expect(element.props.children).toBe("Item Second at 1");
         });
 
         it("should handle different item types", () => {
@@ -105,7 +88,7 @@ describe("getRenderedItem", () => {
                 ["fruit_2", 2],
             ]);
 
-            const result = getRenderedItem(mockCtx, "fruit_1");
+            const result = getRenderedItem(mockCtx, mockState, "fruit_1");
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(1);
@@ -115,21 +98,19 @@ describe("getRenderedItem", () => {
 
     describe("edge cases", () => {
         it("should return null when state is null", () => {
-            mockCtx.state = null as any;
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, null as any, "item_0");
 
             expect(result).toBeNull();
         });
 
         it("should return null when state is undefined", () => {
-            mockCtx.state = undefined as any;
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, undefined as any, "item_0");
 
             expect(result).toBeNull();
         });
 
         it("should return null when key is not found in indexByKey", () => {
-            const result = getRenderedItem(mockCtx, "non_existent_key");
+            const result = getRenderedItem(mockCtx, mockState, "non_existent_key");
 
             expect(result).toBeNull();
         });
@@ -137,7 +118,7 @@ describe("getRenderedItem", () => {
         it("should return null when index is undefined in indexByKey", () => {
             mockState.indexByKey.set("undefined_index", undefined as any);
 
-            const result = getRenderedItem(mockCtx, "undefined_index");
+            const result = getRenderedItem(mockCtx, mockState, "undefined_index");
 
             expect(result).toBeNull();
         });
@@ -145,7 +126,7 @@ describe("getRenderedItem", () => {
         it("should handle empty indexByKey map", () => {
             mockState.indexByKey = new Map();
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, mockState, "item_0");
 
             expect(result).toBeNull();
         });
@@ -153,7 +134,7 @@ describe("getRenderedItem", () => {
         it("should handle null renderItem", () => {
             (mockState.props as any).renderItem = null;
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, mockState, "item_0");
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(0);
@@ -164,7 +145,7 @@ describe("getRenderedItem", () => {
         it("should handle undefined renderItem", () => {
             mockState.props.renderItem = undefined;
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, mockState, "item_0");
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(0);
@@ -175,7 +156,7 @@ describe("getRenderedItem", () => {
         it("should handle index out of bounds", () => {
             mockState.indexByKey.set("out_of_bounds", 10);
 
-            const result = getRenderedItem(mockCtx, "out_of_bounds");
+            const result = getRenderedItem(mockCtx, mockState, "out_of_bounds");
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(10);
@@ -186,7 +167,7 @@ describe("getRenderedItem", () => {
         it("should handle negative index", () => {
             mockState.indexByKey.set("negative", -1);
 
-            const result = getRenderedItem(mockCtx, "negative");
+            const result = getRenderedItem(mockCtx, mockState, "negative");
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(-1);
@@ -198,92 +179,59 @@ describe("getRenderedItem", () => {
         it("should handle renderItem throwing an error", () => {
             mockState.props.renderItem = ThrowingRenderItem;
 
-            expect(() => getRenderedItem(mockCtx, "item_0")).toThrow("Render error");
+            // Creating the element may throw if the function executes immediately; assert it throws
+            expect(() => getRenderedItem(mockCtx, mockState, "item_0")).toThrow("Render error");
         });
 
         it("should handle renderItem returning null", () => {
             mockState.props.renderItem = () => null;
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, mockState, "item_0");
 
             expect(result).not.toBeNull();
+            // renderItem returns null; getRenderedItem returns that value directly
             expect(result!.renderedItem).toBeNull();
         });
 
         it("should handle renderItem returning undefined", () => {
             mockState.props.renderItem = () => undefined;
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, mockState, "item_0");
 
             expect(result).not.toBeNull();
+            // undefined is a valid return; pass through
             expect(result!.renderedItem).toBeUndefined();
         });
 
         it("should handle renderItem returning non-React element", () => {
             mockState.props.renderItem = () => "plain string";
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, mockState, "item_0");
 
             expect(result).not.toBeNull();
+            // Non-React element returned; pass through
             expect(result!.renderedItem).toBe("plain string");
         });
 
         it("should handle complex renderItem with multiple props", () => {
-            const complexRenderItem = mock(({ item, index, extraData, type }: any) =>
+            const ComplexRenderItem = ({ item, index, extraData }: any) =>
                 React.createElement(
                     "div",
                     {
                         "data-id": item.id,
                         "data-index": index,
                         "data-theme": extraData?.theme,
-                        "data-type": type,
                     },
                     item.name,
-                ),
-            );
+                );
 
-            mockState.props.getItemType = () => "message";
-            mockState.props.renderItem = complexRenderItem;
+            mockState.props.renderItem = ComplexRenderItem;
             mockCtx.values.set("extraData", { theme: "dark" });
 
-            const result = getRenderedItem(mockCtx, "item_1");
-
-            expect(result).not.toBeNull();
-            expect(complexRenderItem).toHaveBeenCalledWith({
-                data: mockState.props.data,
-                extraData: { theme: "dark" },
-                index: 1,
-                item: { id: "item2", name: "Second" },
-                type: "message",
-            });
-            expect(React.isValidElement(result!.renderedItem)).toBe(true);
-            const element = result!.renderedItem as React.ReactElement;
-            expect(element.type).toBe("div");
-            expect(element.props["data-theme"]).toBe("dark");
-            expect(element.props["data-type"]).toBe("message");
-        });
-
-        it("should support hook components returned from the render callback", () => {
-            const HookItem = ({ item }: any) => {
-                const [label] = React.useState(item.name);
-                return React.createElement(Text, null, label);
-            };
-            const MemoContainer = () => {
-                const renderedItem = React.useMemo(() => getRenderedItem(mockCtx, "item_0")?.renderedItem ?? null, []);
-                return React.createElement(React.Fragment, null, renderedItem);
-            };
-
-            mockState.props.renderItem = ({ item }: any) => React.createElement(HookItem, { item });
-
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, mockState, "item_1");
 
             expect(result).not.toBeNull();
             expect(React.isValidElement(result!.renderedItem)).toBe(true);
-            expect((result!.renderedItem as React.ReactElement).type).toBe(HookItem);
-            expect(() => {
-                const rendered = render(React.createElement(MemoContainer));
-                rendered.unmount();
-            }).not.toThrow();
         });
     });
 
@@ -291,22 +239,32 @@ describe("getRenderedItem", () => {
         it("should handle missing extraData in context", () => {
             mockCtx.values.delete("extraData");
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, mockState, "item_0");
 
             expect(result).not.toBeNull();
-            expect(React.isValidElement(result!.renderedItem)).toBe(true);
+            const element = result!.renderedItem as React.ReactElement;
+            expect(element.props.children).toBe("Item First at 0");
+        });
+
+        it("should handle corrupted context", () => {
+            mockCtx.values = null as any;
+
+            expect(() => {
+                getRenderedItem(mockCtx, mockState, "item_0");
+            }).not.toThrow(); // peek$ handles null values gracefully
         });
 
         it("should handle different extraData types", () => {
             const testCases = [null, undefined, "", 0, false, [], {}, { complex: { nested: "data" } }];
 
-            testCases.forEach((extraData, _idx) => {
+            testCases.forEach((extraData, idx) => {
                 mockCtx.values.set("extraData", extraData);
 
-                const result = getRenderedItem(mockCtx, "item_0");
+                const result = getRenderedItem(mockCtx, mockState, "item_0");
 
                 expect(result).not.toBeNull();
-                expect(React.isValidElement(result!.renderedItem)).toBe(true);
+                const element = result!.renderedItem as React.ReactElement;
+                expect(element.props.children).toBe("Item First at 0");
             });
         });
     });
@@ -316,7 +274,7 @@ describe("getRenderedItem", () => {
             mockState.props.data = [];
             mockState.indexByKey.set("empty", 0);
 
-            const result = getRenderedItem(mockCtx, "empty");
+            const result = getRenderedItem(mockCtx, mockState, "empty");
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(0);
@@ -328,7 +286,7 @@ describe("getRenderedItem", () => {
 
             // This will throw because data[index] tries to access null[index]
             expect(() => {
-                getRenderedItem(mockCtx, "item_0");
+                getRenderedItem(mockCtx, mockState, "item_0");
             }).toThrow();
         });
 
@@ -348,7 +306,7 @@ describe("getRenderedItem", () => {
             const testKeys = ["null_item", "undefined_item", "empty_string", "zero", "false_item", "object", "array"];
 
             testKeys.forEach((key, idx) => {
-                const result = getRenderedItem(mockCtx, key);
+                const result = getRenderedItem(mockCtx, mockState, key);
 
                 expect(result).not.toBeNull();
                 expect(result!.index).toBe(idx);
@@ -363,17 +321,16 @@ describe("getRenderedItem", () => {
                 ["one", 1],
             ]);
 
-            mockState.props.renderItem = ({ item }: any) => React.createElement("div", null, `Value: ${item}`);
+            mockState.props.renderItem = ({ item }: any) =>
+                React.createElement("div", null, `Value: ${item}`);
 
-            const result = getRenderedItem(mockCtx, "zero");
+            const result = getRenderedItem(mockCtx, mockState, "zero");
 
             expect(result).not.toBeNull();
             expect(result!.item).toBe(0);
             expect(result!.renderedItem).not.toBeNull();
             expect(React.isValidElement(result!.renderedItem)).toBe(true);
-            const element = result!.renderedItem as React.ReactElement;
-            expect(element.type).toBe("div");
-            expect(element.props.children).toBe("Value: 0");
+            expect((result!.renderedItem as React.ReactElement).props.children).toBe("Value: 0");
         });
     });
 
@@ -394,7 +351,7 @@ describe("getRenderedItem", () => {
             // Test multiple calls
             for (let i = 0; i < 100; i++) {
                 const key = `large_item_${i * 100}`;
-                const result = getRenderedItem(mockCtx, key);
+                const result = getRenderedItem(mockCtx, mockState, key);
                 expect(result).not.toBeNull();
             }
 
@@ -407,7 +364,7 @@ describe("getRenderedItem", () => {
 
             for (let i = 0; i < 1000; i++) {
                 const key = `item_${i % 3}`;
-                getRenderedItem(mockCtx, key);
+                getRenderedItem(mockCtx, mockState, key);
             }
 
             const duration = Date.now() - start;
@@ -419,7 +376,7 @@ describe("getRenderedItem", () => {
 
             // Generate many rendered items
             for (let i = 0; i < 1000; i++) {
-                getRenderedItem(mockCtx, `item_${i % 3}`);
+                getRenderedItem(mockCtx, mockState, `item_${i % 3}`);
             }
 
             const finalMemory = process.memoryUsage().heapUsed;
@@ -435,7 +392,7 @@ describe("getRenderedItem", () => {
             mockState.indexByKey = null as any;
 
             expect(() => {
-                getRenderedItem(mockCtx, "item_0");
+                getRenderedItem(mockCtx, mockState, "item_0");
             }).toThrow();
         });
 
@@ -443,14 +400,14 @@ describe("getRenderedItem", () => {
             mockState.props = null as any;
 
             expect(() => {
-                getRenderedItem(mockCtx, "item_0");
+                getRenderedItem(mockCtx, mockState, "item_0");
             }).toThrow();
         });
 
         it("should handle string keys", () => {
             mockState.indexByKey.set("string_key", 1);
 
-            const result = getRenderedItem(mockCtx, "string_key");
+            const result = getRenderedItem(mockCtx, mockState, "string_key");
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(1);
@@ -459,7 +416,7 @@ describe("getRenderedItem", () => {
         it("should handle numeric string keys", () => {
             mockState.indexByKey.set("123", 2);
 
-            const result = getRenderedItem(mockCtx, "123");
+            const result = getRenderedItem(mockCtx, mockState, "123");
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(2);
@@ -468,7 +425,7 @@ describe("getRenderedItem", () => {
         it("should handle empty string key", () => {
             mockState.indexByKey.set("", 0);
 
-            const result = getRenderedItem(mockCtx, "");
+            const result = getRenderedItem(mockCtx, mockState, "");
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(0);
@@ -480,7 +437,7 @@ describe("getRenderedItem", () => {
             specialKeys.forEach((key, idx) => {
                 mockState.indexByKey.set(key, idx);
 
-                const result = getRenderedItem(mockCtx, key);
+                const result = getRenderedItem(mockCtx, mockState, key);
 
                 expect(result).not.toBeNull();
                 expect(result!.index).toBe(idx);

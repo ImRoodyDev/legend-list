@@ -1,24 +1,21 @@
-import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { peek$, type StateContext } from "@/state/state";
 import type {
+    InternalState,
+    LegendListProps,
     ViewAmountToken,
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
     ViewabilityConfigCallbackPairs,
     ViewToken,
-} from "@/types.base";
-import type { InternalState, LegendListPropsBase } from "@/types.internal";
+} from "@/types";
 import { getId } from "@/utils/getId";
-import { findContainerId } from "@/utils/helpers";
 
 function ensureViewabilityState(
     ctx: StateContext,
     configId: string,
 ): {
-    endBuffered: number;
     viewableItems: ViewToken[];
     start: number;
-    startBuffered: number;
     end: number;
     previousStart: number;
     previousEnd: number;
@@ -31,15 +28,7 @@ function ensureViewabilityState(
     }
     let state = map.get(configId);
     if (!state) {
-        state = {
-            end: -1,
-            endBuffered: -1,
-            previousEnd: -1,
-            previousStart: -1,
-            start: -1,
-            startBuffered: -1,
-            viewableItems: [],
-        };
+        state = { end: -1, previousEnd: -1, previousStart: -1, start: -1, viewableItems: [] };
         map.set(configId, state);
     }
     return state;
@@ -47,7 +36,7 @@ function ensureViewabilityState(
 
 export function setupViewability(
     props: Pick<
-        LegendListPropsBase<any, LooseScrollViewProps>,
+        LegendListProps<any>,
         "viewabilityConfig" | "viewabilityConfigCallbackPairs" | "onViewableItemsChanged"
     >,
 ): ViewabilityConfigCallbackPairs<any> | undefined {
@@ -77,8 +66,6 @@ export function updateViewableItems(
     scrollSize: number,
     start: number,
     end: number,
-    startBuffered = start,
-    endBuffered = end,
 ) {
     const {
         timeouts,
@@ -88,8 +75,6 @@ export function updateViewableItems(
         const viewabilityState = ensureViewabilityState(ctx, viewabilityConfigCallbackPair.viewabilityConfig.id!);
         viewabilityState.start = start;
         viewabilityState.end = end;
-        viewabilityState.startBuffered = startBuffered;
-        viewabilityState.endBuffered = endBuffered;
         if (viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime) {
             const timer: any = setTimeout(() => {
                 timeouts.delete(timer);
@@ -112,33 +97,30 @@ function updateViewableItemsWithConfig(
     const { viewabilityConfig, onViewableItemsChanged } = viewabilityConfigCallbackPair;
     const configId = viewabilityConfig.id!;
     const viewabilityState = ensureViewabilityState(ctx, configId);
-    const { viewableItems: previousViewableItems, start, end, startBuffered, endBuffered } = viewabilityState;
+    const { viewableItems: previousViewableItems, start, end } = viewabilityState;
 
-    let staleViewabilityAmountIds: number[] | undefined;
+    const viewabilityTokens = new Map<number, ViewAmountToken>();
     for (const [containerId, value] of ctx.mapViewabilityAmountValues) {
-        const nextValue = computeViewability(
-            state,
-            ctx,
-            viewabilityConfig,
+        viewabilityTokens.set(
             containerId,
-            value.key,
-            scrollSize,
-            value.item,
-            value.index,
+            computeViewability(
+                state,
+                ctx,
+                viewabilityConfig,
+                containerId,
+                value.key,
+                scrollSize,
+                value.item,
+                value.index,
+            ),
         );
-        if (nextValue.sizeVisible < 0) {
-            staleViewabilityAmountIds ??= [];
-            staleViewabilityAmountIds.push(containerId);
-        }
     }
     const changed: ViewToken[] = [];
-    const previousViewableKeys = new Set<string>();
     if (previousViewableItems) {
         for (const viewToken of previousViewableItems) {
-            previousViewableKeys.add(viewToken.key);
             const containerId = findContainerId(ctx, viewToken.key);
             if (
-                !checkIsViewable(
+                !isViewable(
                     state,
                     ctx,
                     viewabilityConfig,
@@ -162,7 +144,7 @@ function updateViewableItemsWithConfig(
         if (item) {
             const key = getId(state, i);
             const containerId = findContainerId(ctx, key);
-            if (checkIsViewable(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, i)) {
+            if (isViewable(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, i)) {
                 const viewToken: ViewToken = {
                     containerId,
                     index: i,
@@ -171,7 +153,7 @@ function updateViewableItemsWithConfig(
                     key,
                 };
                 viewableItems.push(viewToken);
-                if (!previousViewableKeys.has(viewToken.key)) {
+                if (!previousViewableItems?.find((v) => v.key === viewToken.key)) {
                     changed.push(viewToken);
                 }
             }
@@ -193,34 +175,25 @@ function updateViewableItemsWithConfig(
         }
 
         if (onViewableItemsChanged) {
-            onViewableItemsChanged({ changed, end, endBuffered, start, startBuffered, viewableItems });
+            onViewableItemsChanged({ changed, viewableItems });
         }
     }
 
-    if (staleViewabilityAmountIds) {
-        for (const containerId of staleViewabilityAmountIds) {
-            const value = ctx.mapViewabilityAmountValues.get(containerId);
-            if (value && value.sizeVisible < 0) {
-                ctx.mapViewabilityAmountValues.delete(containerId);
-            }
+    for (const [containerId, value] of ctx.mapViewabilityAmountValues) {
+        if (value.sizeVisible < 0) {
+            ctx.mapViewabilityAmountValues.delete(containerId);
         }
     }
 }
 
-function areViewabilityAmountTokensEqual(prev: ViewAmountToken | undefined, next: ViewAmountToken): boolean {
-    return (
-        !!prev &&
-        prev.containerId === next.containerId &&
-        prev.index === next.index &&
-        prev.isViewable === next.isViewable &&
-        prev.item === next.item &&
-        prev.key === next.key &&
-        prev.percentOfScroller === next.percentOfScroller &&
-        prev.percentVisible === next.percentVisible &&
-        prev.scrollSize === next.scrollSize &&
-        prev.size === next.size &&
-        prev.sizeVisible === next.sizeVisible
-    );
+function shallowEqual<T extends object>(prev: T | undefined, next: T): boolean {
+    if (!prev) return false;
+    const keys = Object.keys(next) as Array<keyof T>;
+    for (let i = 0; i < keys.length; i++) {
+        const k = keys[i];
+        if ((prev as any)[k] !== (next as any)[k]) return false;
+    }
+    return true;
 }
 
 function computeViewability(
@@ -233,44 +206,15 @@ function computeViewability(
     item: any,
     index: number,
 ): ViewAmountToken {
-    const { sizes, scroll: scrollState } = state;
-    const topPad =
-        (peek$(ctx, "stylePaddingTop") || 0) +
-        (peek$(ctx, "alignItemsAtEndPadding") || 0) +
-        (peek$(ctx, "headerSize") || 0);
+    const { sizes, positions, scroll: scrollState } = state;
+    const topPad = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
     const { itemVisiblePercentThreshold, viewAreaCoveragePercentThreshold } = viewabilityConfig;
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
     const scroll = scrollState - topPad;
-    const position = state.positions[index];
+
+    const top = positions.get(key)! - scroll;
     const size = sizes.get(key)! || 0;
-
-    if (position === undefined) {
-        const value: ViewAmountToken = {
-            containerId,
-            index,
-            isViewable: false,
-            item,
-            key,
-            percentOfScroller: 0,
-            percentVisible: 0,
-            scrollSize,
-            size,
-            sizeVisible: -1,
-        };
-
-        const prev = ctx.mapViewabilityAmountValues.get(containerId);
-        if (!areViewabilityAmountTokensEqual(prev, value)) {
-            ctx.mapViewabilityAmountValues.set(containerId, value);
-            const cb = ctx.mapViewabilityAmountCallbacks.get(containerId);
-            if (cb) {
-                cb(value);
-            }
-        }
-        return value;
-    }
-
-    const top = position - scroll;
     const bottom = top + size;
     const isEntirelyVisible = top >= 0 && bottom <= scrollSize && bottom > top;
 
@@ -295,7 +239,7 @@ function computeViewability(
     };
 
     const prev = ctx.mapViewabilityAmountValues.get(containerId);
-    if (!areViewabilityAmountTokensEqual(prev, value)) {
+    if (!shallowEqual(prev, value)) {
         ctx.mapViewabilityAmountValues.set(containerId, value);
         const cb = ctx.mapViewabilityAmountCallbacks.get(containerId);
         if (cb) {
@@ -306,7 +250,7 @@ function computeViewability(
     return value;
 }
 
-function checkIsViewable(
+function isViewable(
     state: InternalState,
     ctx: StateContext,
     viewabilityConfig: ViewabilityConfig,
@@ -316,12 +260,22 @@ function checkIsViewable(
     item: any,
     index: number,
 ) {
-    let value = ctx.mapViewabilityAmountValues.get(containerId);
-    if (!value || value.key !== key || value.index !== index) {
-        value = computeViewability(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, index);
-    }
+    const value =
+        ctx.mapViewabilityAmountValues.get(containerId) ||
+        computeViewability(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, index);
 
     return value.isViewable;
+}
+
+function findContainerId(ctx: StateContext, key: string) {
+    const numContainers = peek$(ctx, "numContainers");
+    for (let i = 0; i < numContainers; i++) {
+        const itemKey = peek$(ctx, `containerItemKey${i}`);
+        if (itemKey === key) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 function maybeUpdateViewabilityCallback(
