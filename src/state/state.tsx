@@ -399,7 +399,11 @@ export function useArr$<
 ];
 export function useArr$<T extends ListenerType>(signalNames: T[]): ListenerTypeValueMap[T][] {
     const ctx = React.useContext(ContextState)!;
-    const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, signalNames), [ctx, signalNames]);
+    // Callers pass an inline array literal, so `signalNames` is a fresh reference every render.
+    // Depend on the joined names instead so the selector (and its subscribe/get closures) stays
+    // stable across renders and `useSyncExternalStore` doesn't re-subscribe every render.
+    const signalKey = signalNames.join(",");
+    const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, signalNames), [ctx, signalKey]);
     const value = useSyncExternalStore(subscribe, get, get);
 
     return value;
