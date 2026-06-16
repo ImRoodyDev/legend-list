@@ -75,6 +75,7 @@
         "publish:beta": "bun run build && cd dist && npm publish --tag beta",
         "publish:alpha": "bun run build && cd dist && npm publish --tag alpha",
         "package": "bun run build && cd dist && npm pack && cd ..",
+        "package:local": "bun run prebuild.ts && bunx tsup && bun run postbuild.ts && cd dist && npm pack && cd ..",
         "test": "bun test",
         "test:watch": "bun test --watch",
         "test:coverage": "bun test --coverage",
