@@ -32,6 +32,36 @@ Beyond standard `FlatList` capabilities:
 
 ---
 
+## 🪝 Hooks
+
+### `useWrapperStyle()`
+
+Legend List positions each item by rendering an absolutely-positioned **wrapper** view around it. `useWrapperStyle()` returns a setter that lets an item apply extra style to *its own* wrapper — for example raising `zIndex` on hover so the item can visually overlap its neighbors.
+
+```tsx
+import { useWrapperStyle } from "@legendapp/list/react-native"; // or "@legendapp/list/react"
+
+function Item() {
+    const setWrapperStyle = useWrapperStyle();
+    return (
+        <Pressable
+            onHoverIn={() => setWrapperStyle({ zIndex: 10 })}
+            onHoverOut={() => setWrapperStyle(undefined)}
+        />
+    );
+}
+```
+
+**Why use it instead of styling the item directly?** The style is written to a per-container signal, so calling the setter re-renders **only this item's wrapper** — not the item component itself, and not the rest of the list. Because the item never re-renders, it's ideal for high-frequency interactions like hover and press.
+
+**What you can set:** The list owns the layout props (`position`, `top`/`left`, width/height). Anything else you pass — `zIndex`, `opacity`, `transform`, etc. — is merged on top of those. Pass `undefined` to clear the style.
+
+**Cleanup:** The wrapper style is reset automatically when the container is recycled to a different item, so you don't need to clean it up yourself.
+
+> Must be called from a component rendered inside a Legend List item (i.e. within `renderItem`). Called outside of an item it fails gracefully and does nothing.
+
+---
+
 ## 📚 Documentation
 
 For comprehensive documentation, guides, and the full API reference, please visit:
