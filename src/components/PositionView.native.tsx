@@ -23,6 +23,9 @@ const PositionViewState = typedMemo(function PositionViewState({
     style: StyleProp<ViewStyle>;
     refView: React.RefObject<View>;
     onLayout: (event: LayoutChangeEvent) => void;
+    // tvOS focus tracking; bubbles up from the focusable element inside renderItem.
+    onFocus?: () => void;
+    onBlur?: () => void;
     children: React.ReactNode;
 }) {
     const [position = POSITION_OUT_OF_VIEW, _itemKey, itemStyle] = useArr$([
@@ -56,6 +59,9 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     style: StyleProp<ViewStyle>;
     refView: React.RefObject<View>;
     onLayout: (event: LayoutChangeEvent) => void;
+    // tvOS focus tracking; bubbles up from the focusable element inside renderItem.
+    onFocus?: () => void;
+    onBlur?: () => void;
     children: React.ReactNode;
 }) {
     const position$ = useValue$(`containerPosition${id}`, {
@@ -88,6 +94,9 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     stickyHeaderConfig?: StickyHeaderConfig;
+    // tvOS focus tracking; bubbles up from the focusable element inside renderItem.
+    onFocus?: () => void;
+    onBlur?: () => void;
     children: React.ReactNode;
 }) {
     const ctx = useStateContext();

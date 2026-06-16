@@ -235,6 +235,26 @@ export const Container = typedMemo(function Container<ItemT>({
         forceLayoutRender((v) => v + 1);
     }, []);
 
+    // On tvOS, recycling a container that currently holds focus makes the native focus engine
+    // lose focus (the slot's content and absolute position change underneath it). Track which
+    // item key holds focus so calculateItemsInView can protect that container from being reused.
+    // Focus/blur events bubble up from the focusable element rendered inside the user's renderItem.
+    const trackFocus = Platform.isTV && !!recycleItems;
+    const onFocus = useCallback(() => {
+        const key = itemLayoutRef.current.itemKey;
+        if (!isNullOrUndefined(key)) {
+            ctx.state.focusedKey = key;
+        }
+    }, []);
+    const onBlur = useCallback(() => {
+        const key = itemLayoutRef.current.itemKey;
+        // Only clear if this container is still the focused one. When focus moves between items,
+        // the new item's onFocus may arrive before this blur, so a mismatch means focus already moved.
+        if (!isNullOrUndefined(key) && ctx.state.focusedKey === key) {
+            ctx.state.focusedKey = undefined;
+        }
+    }, []);
+
     const contextValue = useMemo<ContextContainerType>(() => {
         ctx.viewRefs.set(id, ref);
         return {
@@ -313,6 +333,8 @@ export const Container = typedMemo(function Container<ItemT>({
             id={id}
             index={index!}
             key={recycleItems ? undefined : itemKey}
+            onBlur={trackFocus ? onBlur : undefined}
+            onFocus={trackFocus ? onFocus : undefined}
             onLayout={onLayout}
             refView={ref as React.RefObject<any>}
             stickyHeaderConfig={stickyHeaderConfig}

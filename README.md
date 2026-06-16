@@ -26,9 +26,40 @@ Beyond standard `FlatList` capabilities:
 *   `recycleItems`: (boolean) Toggles item component recycling.
     *   `true`: Reuses item components for optimal performance. Be cautious if your item components contain local state, as it might be reused unexpectedly.
     *   `false` (default): Creates new item components every time. Less performant but safer if items have complex internal state.
+    *   On **tvOS** (react-native-tvos), the item that currently has focus is automatically protected from recycling, so D-pad scrolling keeps focus where it should be. See [📺 tvOS focus](#-tvos-focus).
 *   `maintainScrollAtEnd`: Keeps the list pinned to the tail when the user is already near the end (within `maintainScrollAtEndThreshold * screen height`). Pass `true` for all triggers, or `{ animated?: boolean, on?: { dataChange?: boolean, layout?: boolean, itemLayout?: boolean } }`; if `on` is omitted, the object form also enables all triggers.
 *   `maintainVisibleContentPosition`: Keeps visible content steady during size/layout changes while scrolling up or when items resize above the viewport (default). Pass `true` or `{ data: true }` to also anchor during data updates; pass `false` to disable; pass `{ size: false }` to opt out of scroll-time stabilization.
 *   `alignItemsAtEnd`: (boolean) Useful for chat UIs, content smaller than the View will be aligned to the bottom of the list.
+
+---
+
+## 📺 tvOS focus
+
+On **react-native-tvos**, navigating with the D-pad while `recycleItems={true}` used to lose focus: as you scroll, recycled containers swap their content and jump position, and the native tvOS focus engine drops focus from the view it was tracking.
+
+Legend List now handles this for you — **no extra props or configuration required**. The item that currently holds focus is protected from being recycled, so focus stays on the right item while scrolling.
+
+The only requirement is that the focusable element lives **inside `renderItem`** (which is the normal way to build TV rows):
+
+```tsx
+import { Pressable, Text } from "react-native";
+import { LegendList } from "@legendapp/list/react-native";
+
+<LegendList
+    data={data}
+    recycleItems
+    keyExtractor={(item) => item.id}
+    renderItem={({ item }) => (
+        // A focusable element (Pressable / TouchableOpacity / focusable View)
+        // inside renderItem is what the focus engine targets and what gets preserved.
+        <Pressable onPress={() => onSelect(item)}>
+            <Text>{item.name}</Text>
+        </Pressable>
+    )}
+/>
+```
+
+Legend List detects TV via `Platform.isTV`, so the behavior activates only on tvOS and adds no overhead on other platforms.
 
 ---
 

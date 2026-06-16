@@ -152,6 +152,9 @@ export interface InternalState {
     endNoBuffer: number;
     endReachedSnapshot: ThresholdSnapshot | undefined;
     firstFullyOnScreenIndex: number;
+    // Key of the item that currently holds native focus (tvOS). Used to protect that
+    // container from being recycled, which would otherwise make the focus engine lose focus.
+    focusedKey?: string;
     preservedEndAnchorCorrection?: {
         lastRequestTime?: number;
     };

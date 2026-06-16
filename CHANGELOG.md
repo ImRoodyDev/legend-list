@@ -1,3 +1,7 @@
+## 3.0.7
+
+- Fix: On react-native-tvos, D-pad scrolling with recycleItems no longer loses focus. The container currently holding focus is now protected from being recycled, so the native focus engine keeps focus while scrolling.
+
 ## 3.0.6
 
 - Fix: KeyboardAwareLegendList now accounts for bottom insets when alignItemsAtEnd is used, so short chat-style lists stay pinned above the keyboard or safe area instead of being pushed too low or leaving extra scroll space.

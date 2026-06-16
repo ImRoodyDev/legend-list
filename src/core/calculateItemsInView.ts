@@ -454,6 +454,17 @@ export function calculateItemsInView(
                 protectedContainerKeys.add(id);
             }
         }
+
+        // On tvOS, the native focus engine holds focus on a specific native view. Recycling the
+        // container that currently holds focus swaps its content and jumps its position, which makes
+        // the engine drop focus while D-pad scrolling. Protect the focused item's container so it is
+        // never chosen as a recycle target.
+        if (Platform.isTV && state.props.recycleItems && state.focusedKey !== undefined) {
+            if (!protectedContainerKeys) {
+                protectedContainerKeys = new Set();
+            }
+            protectedContainerKeys.add(state.focusedKey);
+        }
         const scrollBeforeMVCP = state.scroll;
         const scrollAdjustPendingBeforeMVCP = peek$(ctx, "scrollAdjustPending") ?? 0;
         checkMVCP?.();

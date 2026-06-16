@@ -15,6 +15,9 @@ interface ExtraPropsFromRN {
     onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     stickyHeaderConfig?: StickyHeaderConfig;
     index?: number;
+    // tvOS focus tracking; native-only, ignored on web.
+    onFocus?: unknown;
+    onBlur?: unknown;
 }
 
 interface PositionViewStateProps {
@@ -25,6 +28,9 @@ interface PositionViewStateProps {
     refView: React.RefObject<HTMLDivElement | null>;
     onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     onLayout?: unknown;
+    // tvOS focus tracking; native-only, ignored on web.
+    onFocus?: unknown;
+    onBlur?: unknown;
     children: React.ReactNode;
 }
 
@@ -70,6 +76,8 @@ const PositionViewState = typedMemo(function PositionViewState({
         onLayout: _onLayout,
         onLayoutChange: _onLayoutChange,
         stickyHeaderConfig: _stickyHeaderConfig,
+        onFocus: _onFocus,
+        onBlur: _onBlur,
         ...webProps
     } = props as PositionViewStateProps & ExtraPropsFromRN;
 
@@ -87,6 +95,8 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     stickyHeaderConfig,
     onLayout: _onLayout,
     onLayoutChange: _onLayoutChange,
+    onFocus: _onFocus,
+    onBlur: _onBlur,
     children,
     ...webProps
 }: {
@@ -99,6 +109,9 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     animatedScrollY?: unknown;
     stickyHeaderConfig?: StickyHeaderConfig;
     onLayout?: unknown;
+    // tvOS focus tracking; native-only, ignored on web.
+    onFocus?: unknown;
+    onBlur?: unknown;
     children: React.ReactNode;
 }) {
     const [position = POSITION_OUT_OF_VIEW, activeStickyIndex, itemStyle] = useArr$([
