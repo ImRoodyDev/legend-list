@@ -5,9 +5,11 @@ import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
 import type { LooseView } from "@/platform/scrollview-types";
 import type {
     ColumnWrapperStyle,
+    StyleProp,
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
+    ViewStyle,
     ViewToken,
 } from "@/types.base";
 import type { InternalState, MaintainVisibleContentPositionNormalized } from "@/types.internal";
@@ -53,6 +55,7 @@ export type ListenerType =
     | `containerSpan${number}`
     | `containerItemData${number}`
     | `containerItemKey${number}`
+    | `containerItemStyle${number}`
     | `containerPosition${number}`
     | `containerSticky${number}`;
 
@@ -111,6 +114,8 @@ export type ListenerTypeValueMap = {
     [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
 } & {
     [K in ListenerType as K extends `containerItemData${number}` ? K : never]: any;
+} & {
+    [K in ListenerType as K extends `containerItemStyle${number}` ? K : never]: StyleProp<ViewStyle>;
 } & {
     [K in ListenerType as K extends `containerPosition${number}` ? K : never]: number;
 } & {

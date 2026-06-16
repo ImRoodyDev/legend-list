@@ -13,5 +13,6 @@ export {
     useSyncLayout,
     useViewability,
     useViewabilityAmount,
+    useWrapperStyle,
 } from "@/entrypoints/shared";
 export * from "@/types.react-native";

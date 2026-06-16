@@ -11,8 +11,14 @@ import {
 
 import { IsNewArchitecture } from "@/constants-platform";
 import { useInit } from "@/hooks/useInit";
-import { useArr$, useSelector$, useStateContext } from "@/state/state";
-import type { LegendListRecyclingState, ViewabilityAmountCallback, ViewabilityCallback } from "@/types.base";
+import { set$, useArr$, useSelector$, useStateContext } from "@/state/state";
+import type {
+    LegendListRecyclingState,
+    StyleProp,
+    ViewabilityAmountCallback,
+    ViewabilityCallback,
+    ViewStyle,
+} from "@/types.base";
 import { isFunction, isNullOrUndefined } from "@/utils/helpers";
 
 export interface ContextContainerType {
@@ -179,6 +185,48 @@ export function useRecyclingState<ItemT>(valueOrFun: ((info: LegendListRecycling
     );
 
     return [stateValue, setState] as const;
+}
+
+/**
+ * Returns a setter that applies an extra style to this item's wrapper (the absolutely
+ * positioned container view that Legend List renders around each item).
+ *
+ * This is the performant way to change wrapper-level style — for example raising `zIndex`
+ * on hover so an item can visually overlap its neighbors. The style is written to a
+ * per-container signal, so calling the setter re-renders ONLY this item's wrapper, not the
+ * item itself or the rest of the list. Because the item component never re-renders, it's
+ * ideal for high-frequency interactions like hover/press.
+ *
+ * The list controls layout props (`position`, `top`/`left`, width/height); anything else you
+ * pass (e.g. `zIndex`, `opacity`, `transform`) is merged on top. The style is automatically
+ * reset when the container is recycled to a different item, so you don't need to clean up.
+ *
+ * @example
+ * function Item() {
+ *     const setWrapperStyle = useWrapperStyle();
+ *     return (
+ *         <Pressable
+ *             onHoverIn={() => setWrapperStyle({ zIndex: 10 })}
+ *             onHoverOut={() => setWrapperStyle(undefined)}
+ *         />
+ *     );
+ * }
+ */
+export function useWrapperStyle(): (style: StyleProp<ViewStyle>) => void {
+    const ctx = useStateContext();
+    const containerContext = useContextContainer();
+    const containerId = containerContext?.containerId;
+
+    return useCallback(
+        (style: StyleProp<ViewStyle>) => {
+            // Fail gracefully if used outside of a container context
+            if (isNullOrUndefined(containerId)) {
+                return;
+            }
+            set$(ctx, `containerItemStyle${containerId}`, style ?? undefined);
+        },
+        [ctx, containerId],
+    );
 }
 
 export function useIsLastItem(): boolean {

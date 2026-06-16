@@ -25,9 +25,19 @@ const PositionViewState = typedMemo(function PositionViewState({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, _itemKey] = useArr$([`containerPosition${id}`, `containerItemKey${id}`]);
+    const [position = POSITION_OUT_OF_VIEW, _itemKey, itemStyle] = useArr$([
+        `containerPosition${id}`,
+        `containerItemKey${id}`,
+        `containerItemStyle${id}`,
+    ]);
 
-    return <View ref={refView} style={[style, horizontal ? { left: position } : { top: position }]} {...rest} />;
+    return (
+        <View
+            ref={refView}
+            style={[style, itemStyle as StyleProp<ViewStyle>, horizontal ? { left: position } : { top: position }]}
+            {...rest}
+        />
+    );
 });
 
 // The Animated version is better on old arch but worse on new arch.
@@ -51,10 +61,11 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     const position$ = useValue$(`containerPosition${id}`, {
         getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
     });
+    const [itemStyle] = useArr$([`containerItemStyle${id}`]);
 
     const position = horizontal ? { left: position$ } : { top: position$ };
 
-    return <Animated.View ref={refView} style={[style, position]} {...rest} />;
+    return <Animated.View ref={refView} style={[style, itemStyle as StyleProp<ViewStyle>, position]} {...rest} />;
 });
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -87,6 +98,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         stylePaddingTop = 0,
         itemKey,
         _totalSize = 0,
+        itemStyle,
     ] = useArr$([
         `containerPosition${id}`,
         "alignItemsAtEndPadding",
@@ -94,6 +106,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         "stylePaddingTop",
         `containerItemKey${id}`,
         "totalSize",
+        `containerItemStyle${id}`,
     ]);
     const pushLimit = React.useMemo(
         () => getStickyPushLimit(ctx.state, index, itemKey),
@@ -139,7 +152,10 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         stickyHeaderConfig?.offset,
     ]);
 
-    const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
+    const viewStyle = React.useMemo(
+        () => [style, { zIndex: index + 1000 }, itemStyle as StyleProp<ViewStyle>, { transform }],
+        [style, index, itemStyle, transform],
+    );
 
     const renderStickyHeaderBackdrop = React.useMemo(() => {
         if (!stickyHeaderConfig?.backdropComponent) {

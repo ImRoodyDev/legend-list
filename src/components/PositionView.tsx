@@ -47,15 +47,22 @@ const PositionViewState = typedMemo(function PositionViewState({
     refView,
     ...props
 }: PositionViewStateProps) {
-    const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
+    const [position = POSITION_OUT_OF_VIEW, itemStyle] = useArr$([`containerPosition${id}`, `containerItemStyle${id}`]);
 
     // Merge to a single CSSProperties object and avoid RN-style transform arrays
     const composed: CSSProperties = isArray(style)
         ? (Object.assign({}, ...style) as CSSProperties)
         : (style as unknown as CSSProperties);
+    // Per-item wrapper style set via useWrapperStyle (e.g. zIndex on hover). Merged on top of
+    // the list-controlled style but below the authoritative position so layout stays correct.
+    const composedItem: CSSProperties | undefined = itemStyle
+        ? isArray(itemStyle)
+            ? (Object.assign({}, ...itemStyle) as CSSProperties)
+            : (itemStyle as unknown as CSSProperties)
+        : undefined;
     const combinedStyle: CSSProperties = horizontal
-        ? ({ ...baseCss, ...composed, left: position } as CSSProperties)
-        : ({ ...baseCss, ...composed, top: position } as CSSProperties);
+        ? ({ ...baseCss, ...composed, ...composedItem, left: position } as CSSProperties)
+        : ({ ...baseCss, ...composed, ...composedItem, top: position } as CSSProperties);
 
     const {
         animatedScrollY: _animatedScrollY,
@@ -94,9 +101,10 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     onLayout?: unknown;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, activeStickyIndex] = useArr$([
+    const [position = POSITION_OUT_OF_VIEW, activeStickyIndex, itemStyle] = useArr$([
         `containerPosition${id}`,
         "activeStickyIndex",
+        `containerItemStyle${id}`,
     ]);
 
     const composed = React.useMemo(
@@ -106,14 +114,25 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         [style],
     );
 
+    const composedItem = React.useMemo(
+        () =>
+            itemStyle
+                ? isArray(itemStyle)
+                    ? (Object.assign({}, ...itemStyle) as CSSProperties)
+                    : (itemStyle as unknown as CSSProperties)
+                : undefined,
+        [itemStyle],
+    );
+
     const viewStyle = React.useMemo(() => {
-        const styleBase: CSSProperties = { ...baseCss, ...composed };
+        const styleBase: CSSProperties = { ...baseCss, ...composed, ...composedItem };
         delete styleBase.transform;
 
         const offset = stickyHeaderConfig?.offset ?? 0;
         const isActive = activeStickyIndex === index;
         styleBase.position = isActive ? "sticky" : "absolute";
-        styleBase.zIndex = index + 1000;
+        // Keep the sticky stacking order unless the item explicitly overrides zIndex.
+        styleBase.zIndex = composedItem?.zIndex ?? index + 1000;
 
         if (horizontal) {
             styleBase.left = isActive ? offset : position;
@@ -122,7 +141,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         }
 
         return styleBase;
-    }, [composed, horizontal, position, index, activeStickyIndex, stickyHeaderConfig?.offset]);
+    }, [composed, composedItem, horizontal, position, index, activeStickyIndex, stickyHeaderConfig?.offset]);
 
     const renderStickyHeaderBackdrop = React.useMemo(
         () =>

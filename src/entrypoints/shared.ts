@@ -36,4 +36,5 @@ export {
     useSyncLayout,
     useViewability,
     useViewabilityAmount,
+    useWrapperStyle,
 } from "@/state/ContextContainer";
