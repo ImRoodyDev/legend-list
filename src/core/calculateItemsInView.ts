@@ -10,7 +10,7 @@ import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
-import { peek$, type StateContext, set$ } from "@/state/state";
+import { peek$, type StateContext, set$, setContainerItemStyle } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getExpandedContainerPoolSize } from "@/utils/containerPool";
@@ -674,7 +674,7 @@ export function calculateItemsInView(
                     // Reset any per-item wrapper style (e.g. hover zIndex) when this container
                     // is recycled to a different item so the new item starts clean.
                     if (oldKey !== id) {
-                        set$(ctx, `containerItemStyle${containerIndex}`, undefined);
+                        setContainerItemStyle(ctx, containerIndex, undefined);
                     }
 
                     // Store item type for type-safe container reuse
@@ -776,7 +776,7 @@ export function calculateItemsInView(
 
                 set$(ctx, `containerItemKey${i}`, undefined);
                 set$(ctx, `containerItemData${i}`, undefined);
-                set$(ctx, `containerItemStyle${i}`, undefined);
+                setContainerItemStyle(ctx, i, undefined);
                 set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                 set$(ctx, `containerColumn${i}`, -1);
                 set$(ctx, `containerSpan${i}`, 1);

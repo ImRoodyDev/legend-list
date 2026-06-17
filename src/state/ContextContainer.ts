@@ -11,7 +11,7 @@ import {
 
 import { IsNewArchitecture } from "@/constants-platform";
 import { useInit } from "@/hooks/useInit";
-import { set$, useArr$, useSelector$, useStateContext } from "@/state/state";
+import { setContainerItemStyle, useArr$, useSelector$, useStateContext } from "@/state/state";
 import type {
     LegendListRecyclingState,
     StyleProp,
@@ -223,7 +223,7 @@ export function useWrapperStyle(): (style: StyleProp<ViewStyle>) => void {
             if (isNullOrUndefined(containerId)) {
                 return;
             }
-            set$(ctx, `containerItemStyle${containerId}`, style ?? undefined);
+            setContainerItemStyle(ctx, containerId, style);
         },
         [ctx, containerId],
     );

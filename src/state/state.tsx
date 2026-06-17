@@ -129,6 +129,7 @@ export type ListenerTypeValueMap = {
 export interface StateContext {
     animatedScrollY: AnimatedValue;
     columnWrapperStyle: ColumnWrapperStyle | undefined;
+    containerItemStyleUpdaters: Map<number, (style: StyleProp<ViewStyle>) => void>;
     containerLayoutTriggers: Map<number, () => void>;
     contextNum: number; // For debug checking that it's the right context
     listeners: Map<ListenerType, Set<(value: any) => void>>;
@@ -162,6 +163,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
     const [value] = React.useState<StateContext>(() => ({
         animatedScrollY: createAnimatedValue(0),
         columnWrapperStyle: undefined,
+        containerItemStyleUpdaters: new Map<number, (style: StyleProp<ViewStyle>) => void>(),
         containerLayoutTriggers: new Map<number, () => void>(),
         contextNum: contextNum++,
         listeners: new Map(),
@@ -278,6 +280,18 @@ export function set$<T extends ListenerType>(
             }
         }
     }
+}
+
+export function setContainerItemStyle(ctx: StateContext, containerId: number, style: StyleProp<ViewStyle>) {
+    const signalName = `containerItemStyle${containerId}` as const;
+    const nextStyle = style ?? undefined;
+
+    if (peek$(ctx, signalName) === nextStyle) {
+        return;
+    }
+
+    set$(ctx, signalName, nextStyle);
+    ctx.containerItemStyleUpdaters.get(containerId)?.(nextStyle);
 }
 
 export function listenPosition$<T extends ListenerType>(

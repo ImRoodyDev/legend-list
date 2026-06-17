@@ -1,14 +1,68 @@
 import * as React from "react";
-import { Animated, type LayoutChangeEvent, type StyleProp, View, type ViewStyle } from "react-native";
+import { Animated, type LayoutChangeEvent, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 
 import { getStickyPushLimit } from "@/components/stickyPositionUtils";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useValue$ } from "@/hooks/useValue$";
-import { useArr$, useStateContext } from "@/state/state";
+import { peek$, useArr$, useStateContext } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
 import { typedMemo } from "@/types.internal";
 import { getComponent } from "@/utils/getComponent";
+
+type NativeViewWithSetNativeProps = View & {
+    setNativeProps?: (props: { style?: StyleProp<ViewStyle> }) => void;
+};
+
+function createClearedWrapperStyle(previousStyle: StyleProp<ViewStyle>, nextStyle: StyleProp<ViewStyle>) {
+    const previous = StyleSheet.flatten(previousStyle) as ViewStyle | undefined;
+    const next = StyleSheet.flatten(nextStyle) as ViewStyle | undefined;
+
+    if (!previous) {
+        return undefined;
+    }
+
+    let clearedStyle: ViewStyle | undefined;
+    for (const key of Object.keys(previous) as Array<keyof ViewStyle>) {
+        if (!next || !(key in next)) {
+            clearedStyle ||= {};
+            clearedStyle[key] = undefined;
+        }
+    }
+
+    return clearedStyle;
+}
+
+function useRegisterContainerItemStyleUpdater(id: number, refView: React.RefObject<View | null>) {
+    const ctx = useStateContext();
+    const signalName = `containerItemStyle${id}` as const;
+    const previousStyleRef = React.useRef<StyleProp<ViewStyle>>(peek$(ctx, signalName));
+
+    const updateWrapperStyle = React.useCallback(
+        (nextStyle: StyleProp<ViewStyle>) => {
+            const clearedStyle = createClearedWrapperStyle(previousStyleRef.current, nextStyle);
+            const view = refView.current as NativeViewWithSetNativeProps | null;
+
+            view?.setNativeProps?.({
+                style: clearedStyle ? [clearedStyle, nextStyle] : nextStyle,
+            });
+            previousStyleRef.current = nextStyle;
+        },
+        [refView],
+    );
+
+    if (ctx.containerItemStyleUpdaters.get(id) !== updateWrapperStyle) {
+        ctx.containerItemStyleUpdaters.set(id, updateWrapperStyle);
+    }
+
+    React.useLayoutEffect(() => {
+        return () => {
+            if (ctx.containerItemStyleUpdaters.get(id) === updateWrapperStyle) {
+                ctx.containerItemStyleUpdaters.delete(id);
+            }
+        };
+    }, [ctx, id, updateWrapperStyle]);
+}
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const PositionViewState = typedMemo(function PositionViewState({
@@ -28,11 +82,10 @@ const PositionViewState = typedMemo(function PositionViewState({
     onBlur?: () => void;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, _itemKey, itemStyle] = useArr$([
-        `containerPosition${id}`,
-        `containerItemKey${id}`,
-        `containerItemStyle${id}`,
-    ]);
+    const ctx = useStateContext();
+    const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
+    const itemStyle = peek$(ctx, `containerItemStyle${id}`);
+    useRegisterContainerItemStyleUpdater(id, refView);
 
     return (
         <View
@@ -64,10 +117,12 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     onBlur?: () => void;
     children: React.ReactNode;
 }) {
+    const ctx = useStateContext();
     const position$ = useValue$(`containerPosition${id}`, {
         getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
     });
-    const [itemStyle] = useArr$([`containerItemStyle${id}`]);
+    const itemStyle = peek$(ctx, `containerItemStyle${id}`);
+    useRegisterContainerItemStyleUpdater(id, refView);
 
     const position = horizontal ? { left: position$ } : { top: position$ };
 
@@ -107,7 +162,6 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         stylePaddingTop = 0,
         itemKey,
         _totalSize = 0,
-        itemStyle,
     ] = useArr$([
         `containerPosition${id}`,
         "alignItemsAtEndPadding",
@@ -115,8 +169,9 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         "stylePaddingTop",
         `containerItemKey${id}`,
         "totalSize",
-        `containerItemStyle${id}`,
     ]);
+    const itemStyle = peek$(ctx, `containerItemStyle${id}`);
+    useRegisterContainerItemStyleUpdater(id, refView);
     const pushLimit = React.useMemo(
         () => getStickyPushLimit(ctx.state, index, itemKey),
         [ctx.state, index, itemKey, _totalSize],

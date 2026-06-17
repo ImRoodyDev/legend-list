@@ -16,6 +16,8 @@ import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { isHorizontalRTL } from "@/utils/rtl";
 
+const TV_FOCUS_BLUR_CLEAR_DELAY = 120;
+
 export function getContainerPositionStyle({
     columnWrapperStyle,
     horizontal,
@@ -240,7 +242,13 @@ export const Container = typedMemo(function Container<ItemT>({
     // item key holds focus so calculateItemsInView can protect that container from being reused.
     // Focus/blur events bubble up from the focusable element rendered inside the user's renderItem.
     const trackFocus = Platform.isTV && !!recycleItems;
+    const blurFocusTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const onFocus = useCallback(() => {
+        if (blurFocusTimeoutRef.current !== undefined) {
+            clearTimeout(blurFocusTimeoutRef.current);
+            blurFocusTimeoutRef.current = undefined;
+        }
+
         const key = itemLayoutRef.current.itemKey;
         if (!isNullOrUndefined(key)) {
             ctx.state.focusedKey = key;
@@ -248,11 +256,30 @@ export const Container = typedMemo(function Container<ItemT>({
     }, []);
     const onBlur = useCallback(() => {
         const key = itemLayoutRef.current.itemKey;
-        // Only clear if this container is still the focused one. When focus moves between items,
-        // the new item's onFocus may arrive before this blur, so a mismatch means focus already moved.
-        if (!isNullOrUndefined(key) && ctx.state.focusedKey === key) {
-            ctx.state.focusedKey = undefined;
+        if (blurFocusTimeoutRef.current !== undefined) {
+            clearTimeout(blurFocusTimeoutRef.current);
+            blurFocusTimeoutRef.current = undefined;
         }
+
+        // Keep the blurred key protected briefly. On tvOS, a fast D-pad move can scroll/recycle
+        // between the old item's blur and the next item's focus event, so clearing immediately
+        // leaves the native focused slot available for reuse and can reset focus to the first item.
+        if (!isNullOrUndefined(key) && ctx.state.focusedKey === key) {
+            blurFocusTimeoutRef.current = setTimeout(() => {
+                if (ctx.state.focusedKey === key) {
+                    ctx.state.focusedKey = undefined;
+                }
+                blurFocusTimeoutRef.current = undefined;
+            }, TV_FOCUS_BLUR_CLEAR_DELAY);
+        }
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (blurFocusTimeoutRef.current !== undefined) {
+                clearTimeout(blurFocusTimeoutRef.current);
+            }
+        };
     }, []);
 
     const contextValue = useMemo<ContextContainerType>(() => {

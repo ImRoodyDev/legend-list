@@ -88,6 +88,7 @@ export function createMockContext(
     return {
         animatedScrollY,
         columnWrapperStyle: undefined,
+        containerItemStyleUpdaters: new Map() as StateContext["containerItemStyleUpdaters"],
         containerLayoutTriggers: new Map() as StateContext["containerLayoutTriggers"],
         contextNum: 0,
         listeners,
