@@ -21,6 +21,7 @@ export interface ContextContainerType {
     index: number;
     value: any;
     triggerLayout: () => void;
+    updateZIndex: (zIndex: number) => void;
 }
 
 export const ContextContainer = createContext<ContextContainerType>(null as any);
@@ -133,6 +134,14 @@ export function useRecyclingState<ItemT>(valueOrFun: ((info: LegendListRecycling
     );
 
     return [state.value, setState] as const;
+}
+
+export function useLeanViewContext(): { updateZIndex: (zIndex: number) => void } {
+    const context = useContext(ContextContainer);
+    if (!context) {
+        throw new Error("useLeanViewContext must be used within a LeanViewProvider");
+    }
+    return { updateZIndex: context.updateZIndex };
 }
 
 export function useIsLastItem(): boolean {

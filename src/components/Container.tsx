@@ -1,6 +1,6 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DimensionValue, LayoutRectangle, StyleProp, View, ViewStyle } from "react-native";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
@@ -45,6 +45,11 @@ export const Container = typedMemo(function Container<ItemT>({
     const refLastSize = useRef<{ width: number; height: number }>();
     const ref = useRef<View>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
+    const [parentViewStyle, setParentViewStyle] = useState<ViewStyle>({ zIndex: 0 });
+
+    const updateZIndex = useCallback((zIndex: number) => {
+        setParentViewStyle({ zIndex });
+    }, []);
 
     const otherAxisPos: DimensionValue | undefined = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
     const otherAxisSize: DimensionValue | undefined = numColumns > 1 ? `${(1 / numColumns) * 100}%` : undefined;
@@ -106,9 +111,10 @@ export const Container = typedMemo(function Container<ItemT>({
             triggerLayout: () => {
                 forceLayoutRender((v) => v + 1);
             },
+            updateZIndex,
             value: data,
         };
-    }, [id, itemKey, index, data]);
+    }, [id, itemKey, index, data, updateZIndex]);
 
     // Note: useCallback would be pointless because it would need to have itemKey as a dependency,
     // so it'll change on every render anyway.
@@ -186,7 +192,7 @@ export const Container = typedMemo(function Container<ItemT>({
             refView={ref}
             stickyHeaderConfig={stickyHeaderConfig}
             stickyOffset={isSticky ? stickyOffset : undefined}
-            style={style}
+            style={[style, parentViewStyle]}
         >
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}
