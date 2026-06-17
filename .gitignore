@@ -6,3 +6,4 @@ legendapp-list.tgz
 tsconfig.tsbuildinfo
 *.tgz
 package-lock.json
+.env
