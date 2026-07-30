@@ -99,14 +99,7 @@ export type FeedCard =
           location: string;
       });
 
-const feedAuthors = [
-    "Avery Chen",
-    "Jordan Kim",
-    "Morgan Patel",
-    "Nina Brooks",
-    "Sam Rivera",
-    "Quinn Foster",
-] as const;
+const feedAuthors = ["Avery Chen", "Jordan Kim", "Morgan Patel", "Nina Brooks", "Sam Rivera", "Quinn Foster"] as const;
 
 const feedTitles = [
     "Release Notes",
@@ -128,7 +121,14 @@ const feedBodies = [
 
 const feedAccentColors = ["#D7E8F8", "#F7E7BC", "#F1D7DD", "#D8E0F6", "#D9EBD6", "#E8DBF5"] as const;
 const feedCategoryLabels = ["Engineering", "Design", "Operations", "Launch", "Research", "Support"] as const;
-const feedMediaLabels = ["Preview Board", "Field Photo", "Snapshot", "Moodboard", "Run Capture", "Launch Still"] as const;
+const feedMediaLabels = [
+    "Preview Board",
+    "Field Photo",
+    "Snapshot",
+    "Moodboard",
+    "Run Capture",
+    "Launch Still",
+] as const;
 const feedMediaSubtitles = [
     "Tall image block to vary the measured height.",
     "A media-heavy row that recycles differently than text-only posts.",
@@ -141,8 +141,22 @@ const feedQuoteLines = [
     "If every post has the same structure, the feed hides exactly the variation a list library needs to handle well.",
     "Heterogeneous templates are where estimate quality, recycling, and in-place updates become visible.",
 ] as const;
-const feedEventLocations = ["Pier 19", "Studio 4", "Archive Hall", "Workshop East", "Skyline Room", "North Commons"] as const;
-const feedHighlights = ["Starts soon", "Pinned update", "RSVP open", "Schedule change", "Limited seats", "Live now"] as const;
+const feedEventLocations = [
+    "Pier 19",
+    "Studio 4",
+    "Archive Hall",
+    "Workshop East",
+    "Skyline Room",
+    "North Commons",
+] as const;
+const feedHighlights = [
+    "Starts soon",
+    "Pinned update",
+    "RSVP open",
+    "Schedule change",
+    "Limited seats",
+    "Live now",
+] as const;
 const feedPollLabels = [
     ["Keep reactions inline", "Collapse older cards faster", "Ship the new media card"],
     ["More height variance", "Faster scroll-to-end", "Better sticky header backdrop"],

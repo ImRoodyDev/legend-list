@@ -20,7 +20,11 @@ export default function HomeScreen() {
             type: undefined,
         } satisfies LegendListRenderItemProps<Item>;
 
-        return RECYCLE_ITEMS ? renderItem(legendListProps) : <Fragment key={info.item.id}>{renderItem(legendListProps)}</Fragment>;
+        return RECYCLE_ITEMS ? (
+            renderItem(legendListProps)
+        ) : (
+            <Fragment key={info.item.id}>{renderItem(legendListProps)}</Fragment>
+        );
     };
 
     return (

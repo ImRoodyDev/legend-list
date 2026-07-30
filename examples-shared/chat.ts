@@ -83,23 +83,19 @@ const attachmentPalettes = [
 const aiHistoryPairs = [
     {
         prompt: "How should a long message thread stay stable when older rows are prepended?",
-        reply:
-            "Preserve the visible anchor so the rows already on screen do not jump when the new history arrives above them.",
+        reply: "Preserve the visible anchor so the rows already on screen do not jump when the new history arrives above them.",
     },
     {
         prompt: "What matters most when rows have mixed heights?",
-        reply:
-            "Good size estimates. They let the list place rows close to their final positions before exact measurement completes.",
+        reply: "Good size estimates. They let the list place rows close to their final positions before exact measurement completes.",
     },
     {
         prompt: "Why does streaming into an existing assistant row feel better than inserting one token at a time?",
-        reply:
-            "Because it updates a stable cell instead of changing the surrounding layout for every chunk of text.",
+        reply: "Because it updates a stable cell instead of changing the surrounding layout for every chunk of text.",
     },
     {
         prompt: "What should I verify in a chat example if I want it to feel credible?",
-        reply:
-            "Load enough history to require virtualization, preserve the bottom anchor, and make sure new prompts add a user row followed by a streamed assistant row.",
+        reply: "Load enough history to require virtualization, preserve the bottom anchor, and make sure new prompts add a user row followed by a streamed assistant row.",
     },
 ] as const;
 

@@ -36,7 +36,16 @@ const lastNames = [
     "Walker",
     "Young",
 ] as const;
-const departments = ["Design", "Engineering", "Growth", "Operations", "Product", "Support", "Research", "Sales"] as const;
+const departments = [
+    "Design",
+    "Engineering",
+    "Growth",
+    "Operations",
+    "Product",
+    "Support",
+    "Research",
+    "Sales",
+] as const;
 const cities = ["Austin", "Berlin", "Chicago", "Lisbon", "Seoul", "Tokyo", "Toronto", "Melbourne"] as const;
 const accents = ["#F4A261", "#84A59D", "#6D597A", "#3D5A80", "#E76F51", "#2A9D8F"] as const;
 

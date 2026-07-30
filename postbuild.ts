@@ -122,26 +122,16 @@ async function assertIntegrationBundleIntegrity() {
 
 async function copy(...files: string[]) {
     return Promise.all(
-        files.map((file) =>
-            Bun.write("dist/" + file.replace("src/", ""), Bun.file(file), { createPath: true }),
-        ),
+        files.map((file) => Bun.write("dist/" + file.replace("src/", ""), Bun.file(file), { createPath: true })),
     );
 }
 
 await copy("LICENSE", "CHANGELOG.md", "README.md");
 
-await assertNoMatch(
-    REACT_DTS_FILE,
-    REACT_NATIVE_IMPORT_REGEX,
-    "React Native import found in react type entrypoint",
-);
+await assertNoMatch(REACT_DTS_FILE, REACT_NATIVE_IMPORT_REGEX, "React Native import found in react type entrypoint");
 
 for (const file of RUNTIME_ENTRY_FILES) {
-    await assertNoMatch(
-        file,
-        FORBIDDEN_INTEGRATION_REGEX,
-        "Integration dependency leaked into core entrypoint bundle",
-    );
+    await assertNoMatch(file, FORBIDDEN_INTEGRATION_REGEX, "Integration dependency leaked into core entrypoint bundle");
 }
 
 await assertIntegrationBundleIntegrity();
