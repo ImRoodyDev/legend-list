@@ -1,5 +1,5 @@
  {
-    "name": "@imroody/legendapp-list",
+    "name": "@imroodydev/legendapp-list",
     "version": "3.0.6-tv-optimized.alpha.0",
     "description": "Legend List is a drop-in replacement for FlatList with much better performance and supporting dynamically sized items.",
     "sideEffects": false,
@@ -140,7 +140,9 @@
     },
     "homepage": "https://github.com/ImRoodyDev/legend-list#readme",
     "publishConfig": {
-        "registry": "https://registry.npmjs.org/"
+        "registry": "https://registry.npmjs.org/",
+          "access": "public"
+
     },
     "commitlint": {
         "extends": [
