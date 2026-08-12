@@ -44,7 +44,13 @@ export function useOnLayoutSync<T extends ScrollViewMethods | LooseView | HTMLEl
 
         return createResizeObserver(element, (entry) => {
             const target = entry.target instanceof HTMLElement ? entry.target : undefined;
-            const rectObserved = entry.contentRect ?? target?.getBoundingClientRect();
+            // Report the border box (matches the initial getBoundingClientRect measurement)
+            // so the padding injected on each container for columnWrapperStyle gaps is included
+            // in the item size. entry.contentRect is the content box and drops that padding —
+            // notably rowGap (applied as paddingBottom), which collapses the vertical gap since
+            // row positions are derived from measured item heights. columnGap is unaffected
+            // because columns sit at fixed percentage widths, not measured sizes.
+            const rectObserved = target?.getBoundingClientRect() ?? entry.contentRect;
             const didSizeChange = rectObserved.width !== prevRect.width || rectObserved.height !== prevRect.height;
             // MVCP on web can require a fresh onLayout pass even when the observer size is unchanged.
             const shouldResyncLayout = !!webLayoutResync?.();
